@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+**/TestResults/
+.git/
+.env
+.env.*
+!.env.example
+secrets/

@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/OficinaMecanicaFase1.Domain/OficinaMecanicaFase1.Domain.csproj" />
+  <Project Path="src/OficinaMecanicaFase1.Application/OficinaMecanicaFase1.Application.csproj" />
+  <Project Path="src/OficinaMecanicaFase1.Infrastructure/OficinaMecanicaFase1.Infrastructure.csproj" />
+  <Project Path="src/OficinaMecanicaFase1.Api/OficinaMecanicaFase1.Api.csproj" />
+  <Project Path="tests/OficinaMecanicaFase1.Infrastructure.Tests/OficinaMecanicaFase1.Infrastructure.Tests.csproj" />
+</Solution>
