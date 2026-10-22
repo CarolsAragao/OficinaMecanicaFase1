@@ -115,6 +115,46 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Estoque.AvisoReservaRecusada", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ItemEstoqueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrdemServicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("QuantidadeSolicitada")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<DateTimeOffset>("RegistradoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ResolvidoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal>("SaldoDisponivelObservado")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemEstoqueId");
+
+                    b.HasIndex("OrdemServicoId");
+
+                    b.HasIndex("ResolvidoEmUtc", "RegistradoEmUtc");
+
+                    b.ToTable("AvisosReservaRecusada", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AvisosReservaRecusada_Quantidades", "[QuantidadeSolicitada] > 0 AND [SaldoDisponivelObservado] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.Estoque.EntradaEstoque", b =>
                 {
                     b.Property<Guid>("Id")
@@ -229,6 +269,10 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ItemEstoqueId");
+
+                    b.HasIndex("OrdemServicoId", "ItemEstoqueId")
+                        .IsUnique()
+                        .HasFilter("[LiberadaEmUtc] IS NULL");
 
                     b.HasIndex("OrdemServicoId", "LiberadaEmUtc");
 
@@ -490,6 +534,15 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("OrcamentoAprovadoEmUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("ReservaConfirmadaEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ReservaRecusadaEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("SituacaoReserva")
+                        .HasColumnType("int");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -567,6 +620,21 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                     b.HasOne("OficinaMecanicaFase1.Domain.Cadastros.Cliente", null)
                         .WithMany()
                         .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Estoque.AvisoReservaRecusada", b =>
+                {
+                    b.HasOne("OficinaMecanicaFase1.Domain.Estoque.ItemEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("ItemEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", null)
+                        .WithMany()
+                        .HasForeignKey("OrdemServicoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

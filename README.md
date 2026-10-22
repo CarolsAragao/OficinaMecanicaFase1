@@ -56,7 +56,7 @@ No primeiro início, a API aplica a migration da Identity e cria os papéis `Adm
 | Administrador | Cria contas internas, administra clientes e veículos e mantém serviços, peças e insumos do catálogo. |
 | Atendente | Identifica clientes e veículos, abre ordens de serviço, entrega o código de decisão do orçamento e registra a entrega nos fluxos correspondentes. |
 | Mecânico | Inicia e registra o diagnóstico, solicita a geração do orçamento e, nos fluxos seguintes, executa a OS e registra o consumo. |
-| Estoquista | Registra entradas de estoque; avisos de reserva recusada nos fluxos seguintes. |
+| Estoquista | Registra entradas de estoque, consulta avisos de reserva recusada e tenta novamente após reposição. |
 
 `POST /api/interno/autenticacao` recebe `email` e `senha` e devolve um JWT padrão válido por 15 minutos. Cinco tentativas de senha incorreta bloqueiam a conta por 15 minutos. `GET /api/interno/identidade` exige um dos quatro papéis internos; `POST /api/interno/usuarios` exige `Administrador` e permite criar contas com um dos quatro papéis. O documento OpenAPI indica Bearer nas rotas protegidas, e o botão **Authorize** do Swagger aceita o token devolvido pelo login. Rotas `/api/saude` e `/api/saude/banco` continuam públicas. O cliente da oficina não é uma conta interna. A consulta da proposta e a decisão usam número da OS, CPF/CNPJ e, para decidir, um código individual emitido pelo Atendente.
 
@@ -170,7 +170,7 @@ Exemplo de corpo:
 | GET | `/api/ordens-servico/{numero}/orcamento` | Qualquer papel interno consulta a proposta, com serviços, itens, quantidades e totais. |
 | POST | `/api/ordens-servico/{numero}/codigo-acesso/emissao` | Atendente emite o código individual; na reemissão, exige motivo e invalida o anterior. Corpo: `{"motivo":null}` na primeira emissão. |
 
-Ao incluir peça ou insumo, a OS registra o saldo disponível consultado naquele momento. Isso não reserva nem baixa estoque; reserva e consumo pertencem aos fluxos posteriores de aprovação e execução. Serviço ou item inativo, veículo de outro cliente, serviço ausente, repetição ou quantidade inválida retorna `400`; número de OS inexistente retorna `404`. A migration `CriarOrdensServico` cria a OS, os serviços e itens associados e os marcos. Os seis status oficiais estão definidos no domínio; a abertura usa somente `Recebida`.
+Ao incluir peça ou insumo, a OS registra o saldo disponível consultado naquele momento. Isso não reserva nem baixa estoque; a reserva ocorre depois da aprovação, e o consumo pertence ao fluxo de execução. Serviço ou item inativo, veículo de outro cliente, serviço ausente, repetição ou quantidade inválida retorna `400`; número de OS inexistente retorna `404`. A migration `CriarOrdensServico` cria a OS, os serviços e itens associados e os marcos. Os seis status oficiais estão definidos no domínio; a abertura usa somente `Recebida`.
 
 O orçamento só pode ser gerado depois de o Mecânico iniciar e registrar o diagnóstico. O sistema usa os preços atuais dos serviços e itens associados à OS e grava uma cópia dos nomes, unidades, preços e valores calculados; mudanças posteriores no catálogo não alteram a proposta. Cada serviço tem quantidade 1, e itens usam a quantidade necessária registrada na OS. O valor dos itens é arredondado para duas casas decimais. A geração salva orçamento, linhas, status e marco na mesma transação; uma OS tem no máximo um orçamento. A proposta fica disponível pela API, sem envio de e-mail. A consulta do cliente usa as rotas próprias abaixo. Gerar antes do diagnóstico, repetir o diagnóstico ou gerar novamente retorna `400`. A migration `CriarDiagnosticosEOrcamentos` cria as novas colunas e tabelas.
 
@@ -185,7 +185,18 @@ As duas rotas abaixo são públicas e recebem o CPF/CNPJ no corpo da requisiçã
 | POST | `/api/cliente/ordens-servico/{numero}/orcamento/consulta` | `{"documento":"529.982.247-25"}` | Proposta e decisão atual, quando número e documento pertencem ao mesmo cliente. |
 | POST | `/api/cliente/ordens-servico/{numero}/orcamento/decisao` | `{"documento":"529.982.247-25","codigoAcesso":"CODIGO_ENTREGUE","aprovar":true,"motivo":null}` | Aprova a proposta. Para rejeitar, use `"aprovar":false` e informe o motivo. |
 
-A consulta pública retorna `404` para OS ou documento sem correspondência e nunca inclui o código. A decisão exige o código vigente; credenciais incorretas também retornam `404`. Rejeição sem motivo retorna `400`; proposta já decidida retorna `409`, inclusive se tentarem inverter a decisão. Aprovação registra data e marco, mas a OS só avança à execução após o fluxo de reservas. Rejeição registra motivo, data e marcos próprios de encerramento, libera eventuais reservas na mesma transação e mantém o último status oficial `AguardandoAprovacao`. Ela não é apresentada como `Finalizada` ou `Entregue`. A migration `RegistrarDecisaoOrcamentoEAcessoCliente` adiciona decisão, emissão de código e registro de reservas.
+A consulta pública retorna `404` para OS ou documento sem correspondência e nunca inclui o código. A decisão exige o código vigente; credenciais incorretas também retornam `404`. Rejeição sem motivo retorna `400`; proposta já decidida retorna `409`, inclusive se tentarem inverter a decisão. Aprovação registra data e marco e dispara a tentativa de reserva. Rejeição registra motivo, data e marcos próprios de encerramento, libera eventuais reservas na mesma transação e mantém o último status oficial `AguardandoAprovacao`. Ela não é apresentada como `Finalizada` ou `Entregue`. A migration `RegistrarDecisaoOrcamentoEAcessoCliente` adiciona decisão, emissão de código e registro de reservas.
+
+## Reservas e avisos de estoque
+
+Quando o cliente aprova o orçamento, o sistema tenta reservar integralmente as peças e os insumos necessários. A operação verifica os saldos sob bloqueios de transação no SQL Server e grava todas as reservas juntas. Uma falta em qualquer item recusa a tentativa inteira: nenhum saldo fica reservado parcialmente. A OS continua com status oficial `AguardandoAprovacao`; a consulta interna informa `situacaoReserva` (`Aguardando`, `Confirmada` ou `Recusada`) e `podeIniciarExecucao`. Somente a reserva confirmada permite iniciar a execução. Reservar aumenta `saldoReservado` e reduz `saldoDisponivel`, sem alterar `saldoFisico`.
+
+| Método | Rota | Uso |
+| --- | --- | --- |
+| GET | `/api/avisos-estoque/reservas?somentePendentes=true` | Estoquista consulta avisos pendentes; `false` inclui os resolvidos. |
+| POST | `/api/ordens-servico/{numero}/reservas/tentativa` | Estoquista tenta novamente a reserva depois da reposição. Uma reserva já confirmada retorna `JaConfirmada`, sem duplicação. |
+
+Os avisos identificam OS, item, quantidade solicitada e saldo disponível observado. Uma nova tentativa resolve os avisos anteriores e, se ainda houver falta, grava novos avisos. A migration `ReservarItensEAvisarEstoque` adiciona o estado da reserva e os avisos persistidos. Os testes de integração usam SQL Server para verificar reserva integral, recusa, reposição e concorrência pela última unidade.
 
 O SQL Server é apropriado aqui porque o domínio tem relacionamentos entre cliente, veículo, OS, orçamento e estoque; chaves, restrições e transações ajudam a preservar consistência, especialmente em futuras reservas e baixas. A equipe também já conhece esse banco. EF Core fornece mapeamento e migrations versionadas, e a imagem Developer permite desenvolvimento local reproduzível.
 

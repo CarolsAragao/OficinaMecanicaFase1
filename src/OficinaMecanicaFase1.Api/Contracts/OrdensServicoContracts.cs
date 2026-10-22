@@ -1,5 +1,6 @@
 using OficinaMecanicaFase1.Domain.OrdensServico;
 using OficinaMecanicaFase1.Domain.Orcamentos;
+using OficinaMecanicaFase1.Application.OrdensServico;
 
 namespace OficinaMecanicaFase1.Api.Contracts;
 
@@ -43,7 +44,8 @@ public sealed record OrdemServicoResponse(
     DateTimeOffset CriadaEmUtc, DiagnosticoResponse Diagnostico, ServicoSolicitadoResponse[] ServicosSolicitados,
     ItemNecessarioResponse[] ItensNecessarios, MarcoOrdemServicoResponse[] Marcos,
     DateTimeOffset? OrcamentoAprovadoEmUtc, DateTimeOffset? EncerradaPorRejeicaoEmUtc,
-    string? MotivoEncerramento)
+    string? MotivoEncerramento, string SituacaoReserva, DateTimeOffset? ReservaConfirmadaEmUtc,
+    DateTimeOffset? ReservaRecusadaEmUtc, bool PodeIniciarExecucao)
 {
     public static OrdemServicoResponse De(OrdemServico ordem) => new(
         ordem.Id, ordem.Numero, ordem.ClienteId, ordem.VeiculoId, ordem.Status.ToString(),
@@ -56,5 +58,18 @@ public sealed record OrdemServicoResponse(
         ordem.Marcos.OrderBy(marco => marco.RegistradoEmUtc)
             .Select(marco => new MarcoOrdemServicoResponse(
                 marco.Status.ToString(), marco.Descricao, marco.RegistradoEmUtc)).ToArray(),
-        ordem.OrcamentoAprovadoEmUtc, ordem.EncerradaPorRejeicaoEmUtc, ordem.MotivoEncerramento);
+        ordem.OrcamentoAprovadoEmUtc, ordem.EncerradaPorRejeicaoEmUtc, ordem.MotivoEncerramento,
+        ordem.SituacaoReserva.ToString(), ordem.ReservaConfirmadaEmUtc,
+        ordem.ReservaRecusadaEmUtc, ordem.PodeIniciarExecucao);
+}
+
+public sealed record ItemReservaInsuficienteResponse(Guid ItemEstoqueId, string Nome,
+    decimal QuantidadeSolicitada, decimal SaldoDisponivel);
+public sealed record TentativaReservaResponse(long NumeroOrdemServico, string Situacao,
+    ItemReservaInsuficienteResponse[] ItensInsuficientes)
+{
+    public static TentativaReservaResponse De(ResultadoTentativaReserva resultado) => new(
+        resultado.NumeroOrdemServico, resultado.Situacao.ToString(),
+        resultado.ItensInsuficientes.Select(item => new ItemReservaInsuficienteResponse(
+            item.ItemEstoqueId, item.Nome, item.QuantidadeSolicitada, item.SaldoDisponivel)).ToArray());
 }

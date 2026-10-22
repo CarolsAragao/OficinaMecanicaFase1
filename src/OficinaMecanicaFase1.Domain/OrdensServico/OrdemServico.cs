@@ -2,6 +2,8 @@ using System.Security.Cryptography;
 
 namespace OficinaMecanicaFase1.Domain.OrdensServico;
 
+public enum SituacaoReservaOrdemServico { Aguardando = 0, Confirmada = 1, Recusada = 2 }
+
 public sealed class OrdemServico
 {
     private readonly List<ServicoSolicitado> _servicosSolicitados = [];
@@ -26,6 +28,11 @@ public sealed class OrdemServico
     public DateTimeOffset? OrcamentoAprovadoEmUtc { get; private set; }
     public DateTimeOffset? EncerradaPorRejeicaoEmUtc { get; private set; }
     public string? MotivoEncerramento { get; private set; }
+    public SituacaoReservaOrdemServico SituacaoReserva { get; private set; }
+    public DateTimeOffset? ReservaConfirmadaEmUtc { get; private set; }
+    public DateTimeOffset? ReservaRecusadaEmUtc { get; private set; }
+    public bool PodeIniciarExecucao => OrcamentoAprovadoEmUtc is not null &&
+        EncerradaPorRejeicaoEmUtc is null && SituacaoReserva == SituacaoReservaOrdemServico.Confirmada;
     public byte[] Versao { get; private set; } = [];
     public IReadOnlyCollection<ServicoSolicitado> ServicosSolicitados => _servicosSolicitados;
     public IReadOnlyCollection<ItemNecessario> ItensNecessarios => _itensNecessarios;
@@ -171,5 +178,34 @@ public sealed class OrdemServico
         _marcos.Add(rejeicao);
         _marcos.Add(encerramento);
         return (rejeicao, encerramento);
+    }
+
+    public MarcoOrdemServico ConfirmarReserva(DateTimeOffset agora)
+    {
+        ValidarTentativaReserva();
+        SituacaoReserva = SituacaoReservaOrdemServico.Confirmada;
+        ReservaConfirmadaEmUtc = agora.ToUniversalTime();
+        ReservaRecusadaEmUtc = null;
+        var marco = new MarcoOrdemServico(Id, Status, "Itens de estoque reservados para a OS", agora);
+        _marcos.Add(marco);
+        return marco;
+    }
+
+    public MarcoOrdemServico RecusarReserva(DateTimeOffset agora)
+    {
+        ValidarTentativaReserva();
+        SituacaoReserva = SituacaoReservaOrdemServico.Recusada;
+        ReservaRecusadaEmUtc = agora.ToUniversalTime();
+        var marco = new MarcoOrdemServico(Id, Status, "Reserva recusada; Estoquista notificado", agora);
+        _marcos.Add(marco);
+        return marco;
+    }
+
+    private void ValidarTentativaReserva()
+    {
+        if (Status != StatusOrdemServico.AguardandoAprovacao ||
+            OrcamentoAprovadoEmUtc is null || EncerradaPorRejeicaoEmUtc is not null ||
+            SituacaoReserva == SituacaoReservaOrdemServico.Confirmada)
+            throw new InvalidOperationException("A OS não permite uma tentativa de reserva.");
     }
 }

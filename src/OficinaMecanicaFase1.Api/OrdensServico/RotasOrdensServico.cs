@@ -71,6 +71,12 @@ public static class RotasOrdensServico
             .Produces<CodigoAcessoResponse>()
             .ProducesValidationProblem().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
 
+        ordens.MapPost("/{numero:long}/reservas/tentativa", TentarReservaAsync)
+            .WithName("TentarReservaOrdemServico")
+            .WithSummary("Estoquista tenta novamente a reserva integral após corrigir a disponibilidade.")
+            .RequireAuthorization("Estoquistas")
+            .Produces<TentativaReservaResponse>().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
         return app;
     }
 
@@ -157,6 +163,19 @@ public static class RotasOrdensServico
             ? Results.Ok(new CodigoAcessoResponse(numero, resultado.Valor!.Codigo,
                 resultado.Valor.NumeroEmissao, resultado.Valor.EmitidoEmUtc))
             : ResponderErro(resultado);
+    }
+
+    private static async Task<IResult> TentarReservaAsync(long numero,
+        GerenciadorReservas reservas, CancellationToken cancelamento)
+    {
+        var resultado = await reservas.TentarReservarAsync(numero, cancelamento);
+        return resultado.Situacao switch
+        {
+            SituacaoTentativaReserva.NaoEncontrada => Results.NotFound(),
+            SituacaoTentativaReserva.NaoPermitida => Results.Problem(
+                "A OS não possui orçamento aprovado aguardando reserva.", statusCode: 409),
+            _ => Results.Ok(TentativaReservaResponse.De(resultado))
+        };
     }
 
     private static IResult ResponderErro<T>(ResultadoOrdemServico<T> resultado) => resultado.Erro switch

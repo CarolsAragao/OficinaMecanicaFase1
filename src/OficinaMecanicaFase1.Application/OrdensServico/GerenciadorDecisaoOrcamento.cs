@@ -8,7 +8,8 @@ namespace OficinaMecanicaFase1.Application.OrdensServico;
 
 public sealed record CodigoAcessoEmitido(string Codigo, int NumeroEmissao, DateTimeOffset EmitidoEmUtc);
 
-public sealed class GerenciadorDecisaoOrcamento(IRepositorioOrdensServico repositorio, TimeProvider tempo)
+public sealed class GerenciadorDecisaoOrcamento(
+    IRepositorioOrdensServico repositorio, GerenciadorReservas reservas, TimeProvider tempo)
 {
     public async Task<Orcamento?> ConsultarPropostaAsync(long numero, string? documento,
         CancellationToken cancelamento)
@@ -92,6 +93,7 @@ public sealed class GerenciadorDecisaoOrcamento(IRepositorioOrdensServico reposi
                 foreach (var reserva in reservas) reserva.Liberar(agora);
             }
             await repositorio.SalvarAsync(cancelamento);
+            if (aprovar) await reservas.TentarReservarAsync(numero, cancelamento);
             return ResultadoOrdemServico<Orcamento>.Sucesso(orcamento);
         }
         catch (ArgumentException erro)

@@ -18,6 +18,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
     public DbSet<OrdemServico> OrdensServico => Set<OrdemServico>();
     public DbSet<Orcamento> Orcamentos => Set<Orcamento>();
     public DbSet<ReservaItemOrdemServico> ReservasItensOrdensServico => Set<ReservaItemOrdemServico>();
+    public DbSet<AvisoReservaRecusada> AvisosReservaRecusada => Set<AvisoReservaRecusada>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -117,6 +118,8 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.Property(ordem => ordem.CodigoAcessoHash).HasMaxLength(32);
             entity.Property(ordem => ordem.MotivoEncerramento).HasMaxLength(1000);
             entity.Property(ordem => ordem.Versao).IsRowVersion();
+            entity.Property(ordem => ordem.SituacaoReserva).HasConversion<int>().IsRequired();
+            entity.Ignore(ordem => ordem.PodeIniciarExecucao);
             entity.HasIndex(ordem => new { ordem.Status, ordem.CriadaEmUtc });
             entity.HasOne<Cliente>().WithMany().HasForeignKey(ordem => ordem.ClienteId)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -187,9 +190,27 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.Property(reserva => reserva.Quantidade).HasPrecision(18, 3).IsRequired();
             entity.Property(reserva => reserva.ReservadaEmUtc).IsRequired();
             entity.HasIndex(reserva => new { reserva.OrdemServicoId, reserva.LiberadaEmUtc });
+            entity.HasIndex(reserva => new { reserva.OrdemServicoId, reserva.ItemEstoqueId })
+                .IsUnique().HasFilter("[LiberadaEmUtc] IS NULL");
             entity.HasOne<OrdemServico>().WithMany().HasForeignKey(reserva => reserva.OrdemServicoId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<ItemEstoque>().WithMany().HasForeignKey(reserva => reserva.ItemEstoqueId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AvisoReservaRecusada>(entity =>
+        {
+            entity.ToTable("AvisosReservaRecusada", table =>
+                table.HasCheckConstraint("CK_AvisosReservaRecusada_Quantidades",
+                    "[QuantidadeSolicitada] > 0 AND [SaldoDisponivelObservado] >= 0"));
+            entity.HasKey(aviso => aviso.Id);
+            entity.Property(aviso => aviso.QuantidadeSolicitada).HasPrecision(18, 3).IsRequired();
+            entity.Property(aviso => aviso.SaldoDisponivelObservado).HasPrecision(18, 3).IsRequired();
+            entity.Property(aviso => aviso.RegistradoEmUtc).IsRequired();
+            entity.HasIndex(aviso => new { aviso.ResolvidoEmUtc, aviso.RegistradoEmUtc });
+            entity.HasOne<OrdemServico>().WithMany().HasForeignKey(aviso => aviso.OrdemServicoId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ItemEstoque>().WithMany().HasForeignKey(aviso => aviso.ItemEstoqueId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

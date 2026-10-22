@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OficinaMecanicaFase1.Api.Contracts;
+using OficinaMecanicaFase1.Application.OrdensServico;
 using OficinaMecanicaFase1.Domain.Cadastros;
 using OficinaMecanicaFase1.Domain.Catalogo;
 using OficinaMecanicaFase1.Domain.Estoque;
@@ -23,6 +24,142 @@ namespace OficinaMecanicaFase1.Infrastructure.Tests;
 
 public sealed class OrdensServicoTests
 {
+    [Fact]
+    public async Task ReservasSaoAtomicasAvisamEstoquistaEPreservamUltimaUnidadeSobConcorrencia()
+    {
+        await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();
+        await sqlServer.StartAsync();
+        var conexao = new SqlConnectionStringBuilder(sqlServer.GetConnectionString())
+        {
+            InitialCatalog = $"OficinaReservas_{Guid.NewGuid():N}"
+        };
+        var configuracoes = new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Oficina"] = conexao.ConnectionString,
+            ["Jwt:Issuer"] = "OficinaMecanicaFase1",
+            ["Jwt:Audience"] = "OficinaMecanicaFase1.Interno",
+            ["Jwt:SigningKey"] = Convert.ToBase64String(Encoding.UTF8.GetBytes("UmaChaveFixaDeTesteComMaisDeTrintaEDoisBytes!")),
+            ["Bootstrap:AdminEmail"] = "admin@reservas.test",
+            ["Bootstrap:AdminPassword"] = "AdminDeTeste123!"
+        };
+        using var fabrica = new OficinaApiFactory(configuracoes);
+        using var interno = fabrica.CreateClient();
+        using var publico = fabrica.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await interno.GetAsync("/api/avisos-estoque/reservas")).StatusCode);
+        await AutenticarAsync(interno, "admin@reservas.test", "AdminDeTeste123!");
+        var pessoa = await CriarClienteAsync(interno, "Ana", "529.982.247-25");
+        var veiculo = await CriarVeiculoAsync(interno, pessoa.Id, "ABC1234");
+        var servico = await CriarServicoAsync(interno, "Revisão", 120m);
+        var peca = await CriarItemAsync(interno, "Filtro", "Peca", "un");
+        var insumo = await CriarItemAsync(interno, "Óleo", "Insumo", "L");
+        var ultimaPeca = await CriarItemAsync(interno, "Última peça", "Peca", "un");
+        foreach (var (email, senha, papel) in new[]
+        {
+            ("estoquista@reservas.test", "EstoquistaDeTeste123!", "Estoquista"),
+            ("mecanico@reservas.test", "MecanicoDeTeste123!", "Mecânico"),
+            ("atendente@reservas.test", "AtendenteDeTeste123!", "Atendente")
+        })
+            Assert.Equal(HttpStatusCode.Created, (await interno.PostAsJsonAsync("/api/interno/usuarios",
+                new { Email = email, Senha = senha, Papel = papel })).StatusCode);
+
+        await AutenticarAsync(interno, "estoquista@reservas.test", "EstoquistaDeTeste123!");
+        await ReporAsync(interno, peca.Id, 1m);
+        await ReporAsync(interno, ultimaPeca.Id, 1m);
+        await AutenticarAsync(interno, "admin@reservas.test", "AdminDeTeste123!");
+        var numeros = new List<long>();
+        foreach (var itens in new[]
+        {
+            new[] { new ItemNecessarioRequest(peca.Id, 1m), new ItemNecessarioRequest(insumo.Id, 0.5m) },
+            new[] { new ItemNecessarioRequest(ultimaPeca.Id, 1m) },
+            new[] { new ItemNecessarioRequest(ultimaPeca.Id, 1m) }
+        })
+        {
+            var resposta = await interno.PostAsJsonAsync("/api/ordens-servico",
+                new CriarOrdemServicoRequest(pessoa.Id, veiculo.Id, [servico.Id], itens));
+            Assert.Equal(HttpStatusCode.Created, resposta.StatusCode);
+            numeros.Add((await resposta.Content.ReadFromJsonAsync<OrdemServicoResponse>())!.Numero);
+        }
+        await AutenticarAsync(interno, "mecanico@reservas.test", "MecanicoDeTeste123!");
+        foreach (var numero in numeros)
+        {
+            var rota = $"/api/ordens-servico/{numero}";
+            Assert.Equal(HttpStatusCode.OK, (await interno.PostAsync(rota + "/diagnostico/inicio", null)).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await interno.PostAsJsonAsync(rota + "/diagnostico",
+                new RegistrarDiagnosticoRequest("Serviço necessário"))).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await interno.PostAsync(rota + "/orcamento", null)).StatusCode);
+        }
+        await AutenticarAsync(interno, "atendente@reservas.test", "AtendenteDeTeste123!");
+        var codigos = new List<string>();
+        foreach (var numero in numeros)
+        {
+            var resposta = await interno.PostAsJsonAsync(
+                $"/api/ordens-servico/{numero}/codigo-acesso/emissao", new EmitirCodigoAcessoRequest(null));
+            Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+            codigos.Add((await resposta.Content.ReadFromJsonAsync<CodigoAcessoResponse>())!.Codigo);
+        }
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await interno.GetAsync("/api/avisos-estoque/reservas")).StatusCode);
+        var decisao = new DecidirOrcamentoClienteRequest("529.982.247-25", codigos[0], true, null);
+        var aprovacao = await publico.PostAsJsonAsync(
+            $"/api/cliente/ordens-servico/{numeros[0]}/orcamento/decisao", decisao);
+        Assert.Equal(HttpStatusCode.OK, aprovacao.StatusCode);
+        var semReserva = (await interno.GetFromJsonAsync<OrdemServicoResponse>(
+            $"/api/ordens-servico/{numeros[0]}"))!;
+        Assert.Equal("AguardandoAprovacao", semReserva.Status);
+        Assert.Equal("Recusada", semReserva.SituacaoReserva);
+        Assert.False(semReserva.PodeIniciarExecucao);
+        var pecaSemReserva = (await interno.GetFromJsonAsync<ItemEstoqueResponse>(
+            $"/api/itens-estoque/{peca.Id}"))!;
+        Assert.Equal(1m, pecaSemReserva.SaldoFisico);
+        Assert.Equal(0m, pecaSemReserva.SaldoReservado);
+        await AutenticarAsync(interno, "estoquista@reservas.test", "EstoquistaDeTeste123!");
+        var avisos = (await interno.GetFromJsonAsync<AvisoReservaEstoque[]>(
+            "/api/avisos-estoque/reservas"))!;
+        Assert.Single(avisos);
+        Assert.Equal(insumo.Id, avisos[0].ItemEstoqueId);
+        await ReporAsync(interno, insumo.Id, 0.5m);
+        var novaTentativa = await interno.PostAsync(
+            $"/api/ordens-servico/{numeros[0]}/reservas/tentativa", null);
+        Assert.Equal(HttpStatusCode.OK, novaTentativa.StatusCode);
+        Assert.Equal("Confirmada", (await novaTentativa.Content.ReadFromJsonAsync<TentativaReservaResponse>())!.Situacao);
+        Assert.Empty((await interno.GetFromJsonAsync<AvisoReservaEstoque[]>(
+            "/api/avisos-estoque/reservas"))!);
+        var confirmada = (await interno.GetFromJsonAsync<OrdemServicoResponse>(
+            $"/api/ordens-servico/{numeros[0]}"))!;
+        Assert.True(confirmada.PodeIniciarExecucao);
+        Assert.Equal("AguardandoAprovacao", confirmada.Status);
+        Assert.Equal(1m, (await interno.GetFromJsonAsync<ItemEstoqueResponse>(
+            $"/api/itens-estoque/{peca.Id}"))!.SaldoReservado);
+        var insumoReservado = (await interno.GetFromJsonAsync<ItemEstoqueResponse>(
+            $"/api/itens-estoque/{insumo.Id}"))!;
+        Assert.Equal(0.5m, insumoReservado.SaldoFisico);
+        Assert.Equal(0.5m, insumoReservado.SaldoReservado);
+        Assert.Equal(HttpStatusCode.OK, (await interno.PostAsync(
+            $"/api/ordens-servico/{numeros[0]}/reservas/tentativa", null)).StatusCode);
+
+        var aprovacoesConcorrentes = await Task.WhenAll(numeros.Skip(1).Select((numero, indice) =>
+            publico.PostAsJsonAsync($"/api/cliente/ordens-servico/{numero}/orcamento/decisao",
+                new DecidirOrcamentoClienteRequest("529.982.247-25", codigos[indice + 1], true, null))));
+        Assert.All(aprovacoesConcorrentes, resposta => Assert.Equal(HttpStatusCode.OK, resposta.StatusCode));
+        var disputantes = await Task.WhenAll(numeros.Skip(1).Select(numero =>
+            interno.GetFromJsonAsync<OrdemServicoResponse>($"/api/ordens-servico/{numero}")));
+        Assert.Single(disputantes, ordem => ordem!.SituacaoReserva == "Confirmada");
+        Assert.Single(disputantes, ordem => ordem!.SituacaoReserva == "Recusada");
+        Assert.All(disputantes, ordem => Assert.Equal("AguardandoAprovacao", ordem!.Status));
+        var ultima = (await interno.GetFromJsonAsync<ItemEstoqueResponse>(
+            $"/api/itens-estoque/{ultimaPeca.Id}"))!;
+        Assert.Equal(1m, ultima.SaldoFisico);
+        Assert.Equal(1m, ultima.SaldoReservado);
+        using var escopo = fabrica.Services.CreateScope();
+        var db = escopo.ServiceProvider.GetRequiredService<OficinaDbContext>();
+        Assert.False(db.Database.HasPendingModelChanges());
+        Assert.Equal(1, await db.ReservasItensOrdensServico.CountAsync(reserva =>
+            reserva.ItemEstoqueId == ultimaPeca.Id && reserva.LiberadaEmUtc == null));
+        Assert.Single((await interno.GetFromJsonAsync<AvisoReservaEstoque[]>(
+            "/api/avisos-estoque/reservas"))!);
+    }
+
     [Fact]
     public void CriacaoGeraStatusRecebidaEMarcoERecusaSolicitacaoSemServico()
     {
