@@ -53,8 +53,8 @@ No primeiro início, a API aplica a migration da Identity e cria os papéis `Adm
 
 | Papel | Responsabilidade inicial |
 | --- | --- |
-| Administrador | Cria contas internas; gestão futura de cadastros e catálogo de serviços. |
-| Atendente | Identificação e cadastro de cliente, abertura e entrega de OS nas rotas futuras. |
+| Administrador | Cria contas internas, administra clientes e veículos; gestão do catálogo de serviços. |
+| Atendente | Identifica e cadastra clientes e veículos; abertura e entrega de OS nos fluxos seguintes. |
 | Mecânico | Diagnóstico, execução e registro de consumo nas rotas futuras. |
 | Estoquista | Avisos de reserva recusada e reposição nas rotas futuras. |
 
@@ -91,6 +91,29 @@ docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -
 ```
 
 O teste de integração cria um SQL Server descartável próprio por meio do Testcontainers, aplica a migration, grava um registro e lê o mesmo registro em outro `DbContext`. Docker Desktop deve estar ligado para `dotnet test`. O comando `sqlcmd` solicita a senha interativamente. Os testes não usam o volume da aplicação.
+
+## Clientes e veículos
+
+As rotas abaixo exigem o JWT obtido em `POST /api/interno/autenticacao`. `Administrador` e `Atendente` podem cadastrar, consultar e atualizar. Só `Administrador` pode excluir. Os campos de cliente são `nome` e `documento`; os de veículo são `clienteId`, `placa`, `marca`, `modelo` e `ano`. Na atualização de veículo, envie apenas `placa`, `marca`, `modelo` e `ano`: o proprietário permanece o mesmo.
+
+| Método | Rota | Uso |
+| --- | --- | --- |
+| GET | `/api/clientes?documento=529.982.247-25` | Identificar cliente por CPF/CNPJ; retorna lista vazia se o documento válido não estiver cadastrado. Sem filtro, lista todos. |
+| GET | `/api/clientes/{id}` | Consultar cliente. |
+| POST | `/api/clientes` | Cadastrar cliente. |
+| PUT | `/api/clientes/{id}` | Atualizar nome e documento. |
+| DELETE | `/api/clientes/{id}` | Excluir cliente sem veículos ou outras referências. |
+| GET | `/api/veiculos?clienteId={id}` | Listar veículos do cliente; sem filtro, lista todos. |
+| GET | `/api/veiculos/{id}` | Consultar veículo. |
+| POST | `/api/veiculos` | Cadastrar veículo de cliente existente. |
+| PUT | `/api/veiculos/{id}` | Atualizar dados do veículo sem trocar o proprietário. |
+| DELETE | `/api/veiculos/{id}` | Excluir veículo sem referências. |
+
+Exemplo de `POST /api/clientes`: `{"nome":"Ana Maria","documento":"529.982.247-25"}`. Exemplo de `POST /api/veiculos`: `{"clienteId":"ID_DO_CLIENTE","placa":"ABC1D23","marca":"Fiat","modelo":"Uno","ano":2020}`. Substitua `ID_DO_CLIENTE` pelo `id` retornado no cadastro do cliente.
+
+O CPF/CNPJ é validado pelos dígitos verificadores e armazenado só com números. A placa aceita o formato brasileiro antigo (`ABC1234` ou `ABC-1234`) e Mercosul (`ABC1D23`), e é armazenada em maiúsculas sem hífen. Documento e placa são únicos também no banco. O vínculo `Veiculo.ClienteId` tem chave estrangeira para cliente e é usado para conferir se o veículo selecionado na abertura da OS pertence ao cliente informado. As tabelas `Clientes` e `Veiculos` são criadas pela migration `CadastrarClientesEVeiculos` quando a API inicia.
+
+Entradas inválidas retornam `400`; ausência de cadastro, `404`; documento ou placa duplicados e exclusão de cadastro em uso, `409`; falta de autenticação, `401`; papel sem permissão, `403`. O Swagger em `/swagger` apresenta os contratos e indica Bearer nas rotas protegidas.
 
 O SQL Server é apropriado aqui porque o domínio tem relacionamentos entre cliente, veículo, OS, orçamento e estoque; chaves, restrições e transações ajudam a preservar consistência, especialmente em futuras reservas e baixas. A equipe também já conhece esse banco. EF Core fornece mapeamento e migrations versionadas, e a imagem Developer permite desenvolvimento local reproduzível.
 

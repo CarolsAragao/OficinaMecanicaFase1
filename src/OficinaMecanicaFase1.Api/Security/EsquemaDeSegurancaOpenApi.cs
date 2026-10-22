@@ -18,12 +18,15 @@ public static class EsquemaDeSegurancaOpenApi
 
         foreach (var (rota, caminho) in documento.Paths)
         {
-            if (!rota.StartsWith("/api/interno/", StringComparison.OrdinalIgnoreCase) ||
-                rota.Equals("/api/interno/autenticacao", StringComparison.OrdinalIgnoreCase))
+            if (rota.Equals("/api/interno/autenticacao", StringComparison.OrdinalIgnoreCase) ||
+                !(rota.StartsWith("/api/interno/", StringComparison.OrdinalIgnoreCase) ||
+                  RotaDoGrupo(rota, "/api/clientes") ||
+                  RotaDoGrupo(rota, "/api/veiculos")))
             {
                 continue;
             }
 
+            if (caminho.Operations is null) continue;
             foreach (var operacao in caminho.Operations.Values)
             {
                 operacao.Security ??= [];
@@ -36,4 +39,8 @@ public static class EsquemaDeSegurancaOpenApi
 
         return Task.CompletedTask;
     }
+
+    private static bool RotaDoGrupo(string rota, string grupo) =>
+        rota.Equals(grupo, StringComparison.OrdinalIgnoreCase) ||
+        rota.StartsWith(grupo + "/", StringComparison.OrdinalIgnoreCase);
 }

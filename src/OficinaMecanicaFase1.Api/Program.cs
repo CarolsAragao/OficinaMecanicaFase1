@@ -1,4 +1,5 @@
 using OficinaMecanicaFase1.Api.Contracts;
+using OficinaMecanicaFase1.Api.Cadastros;
 using OficinaMecanicaFase1.Api.Security;
 using OficinaMecanicaFase1.Infrastructure.Identity;
 using OficinaMecanicaFase1.Infrastructure.Persistence;
@@ -63,6 +64,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("EquipeInterna", policy => policy.RequireAuthenticatedUser().RequireRole(PapeisInternos.Todos))
+    .AddPolicy("Cadastros", policy => policy.RequireAuthenticatedUser().RequireRole(
+        PapeisInternos.Administrador, PapeisInternos.Atendente))
     .AddPolicy("Administradores", policy => policy.RequireAuthenticatedUser().RequireRole(PapeisInternos.Administrador));
 
 var app = builder.Build();
@@ -129,6 +132,7 @@ app.MapGet("/api/saude/banco", async (OficinaDbContext db, CancellationToken can
     .WithTags("Sistema");
 
 app.MapearAcessoInterno();
+app.MapearCadastros();
 
 app.Run();
 
