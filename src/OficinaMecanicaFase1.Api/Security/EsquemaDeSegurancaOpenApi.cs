@@ -21,7 +21,9 @@ public static class EsquemaDeSegurancaOpenApi
             if (rota.Equals("/api/interno/autenticacao", StringComparison.OrdinalIgnoreCase) ||
                 !(rota.StartsWith("/api/interno/", StringComparison.OrdinalIgnoreCase) ||
                   RotaDoGrupo(rota, "/api/clientes") ||
-                  RotaDoGrupo(rota, "/api/veiculos")))
+                  RotaDoGrupo(rota, "/api/veiculos") ||
+                  RotaDoGrupo(rota, "/api/servicos") ||
+                  RotaDoGrupo(rota, "/api/itens-estoque")))
             {
                 continue;
             }

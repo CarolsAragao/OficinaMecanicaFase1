@@ -1,6 +1,6 @@
 # Oficina Mecânica — Fase 1
 
-Este diretório é a raiz do **repositório do back-end** da oficina mecânica. A documentação DDD fica na pasta irmã `documentacao_oficina_mecanica` e orienta as regras de negócio.
+Este diretório é a raiz do **repositório do back-end** da oficina mecânica. Os diagramas e demais artefatos DDD estão em `Docs-tech-challenge/oficina_mecanica`, fora deste repositório, e orientam as regras de negócio.
 
 ## Estrutura
 
@@ -53,10 +53,10 @@ No primeiro início, a API aplica a migration da Identity e cria os papéis `Adm
 
 | Papel | Responsabilidade inicial |
 | --- | --- |
-| Administrador | Cria contas internas, administra clientes e veículos; gestão do catálogo de serviços. |
+| Administrador | Cria contas internas, administra clientes e veículos e mantém serviços, peças e insumos do catálogo. |
 | Atendente | Identifica e cadastra clientes e veículos; abertura e entrega de OS nos fluxos seguintes. |
 | Mecânico | Diagnóstico, execução e registro de consumo nas rotas futuras. |
-| Estoquista | Avisos de reserva recusada e reposição nas rotas futuras. |
+| Estoquista | Registra entradas de estoque; avisos de reserva recusada nos fluxos seguintes. |
 
 `POST /api/interno/autenticacao` recebe `email` e `senha` e devolve um JWT padrão válido por 15 minutos. Cinco tentativas de senha incorreta bloqueiam a conta por 15 minutos. `GET /api/interno/identidade` exige um dos quatro papéis internos; `POST /api/interno/usuarios` exige `Administrador` e permite criar contas com um dos quatro papéis. O documento OpenAPI indica Bearer nas rotas protegidas, e o botão **Authorize** do Swagger aceita o token devolvido pelo login. Rotas `/api/saude` e `/api/saude/banco` continuam públicas. O cliente da oficina não é uma conta interna; a consulta de OS e decisões sobre orçamento serão desenvolvidas nos fluxos próprios.
 
@@ -115,6 +115,31 @@ O CPF/CNPJ é validado pelos dígitos verificadores e armazenado só com número
 
 Entradas inválidas retornam `400`; ausência de cadastro, `404`; documento ou placa duplicados e exclusão de cadastro em uso, `409`; falta de autenticação, `401`; papel sem permissão, `403`. O Swagger em `/swagger` apresenta os contratos e indica Bearer nas rotas protegidas.
 
+## Serviços, peças e insumos
+
+As leituras abaixo exigem JWT de qualquer papel interno. `Administrador` cria, atualiza, desativa e reativa serviços e itens. `Estoquista` registra a entrada física de peças e insumos. A desativação preserva o cadastro e suas entradas; `somenteAtivos=true` mostra o catálogo selecionável para uma nova OS.
+
+| Método | Rota | Uso |
+| --- | --- | --- |
+| GET | `/api/servicos?somenteAtivos=true` | Listar serviços ativos; sem o filtro, inclui desativados. |
+| GET | `/api/servicos/{id}` | Consultar serviço. |
+| POST | `/api/servicos` | Cadastrar serviço. |
+| PUT | `/api/servicos/{id}` | Atualizar nome, descrição e preço base. |
+| DELETE | `/api/servicos/{id}` | Desativar sem excluir o histórico. |
+| PATCH | `/api/servicos/{id}/ativacao` | Reativar ou desativar com `{"ativo":true}` ou `{"ativo":false}`. |
+| GET | `/api/itens-estoque?somenteAtivos=true` | Listar peças e insumos ativos; sem o filtro, inclui desativados. |
+| GET | `/api/itens-estoque/{id}` | Consultar item e saldos físico, reservado e disponível. |
+| POST | `/api/itens-estoque` | Cadastrar peça ou insumo. |
+| PUT | `/api/itens-estoque/{id}` | Atualizar nome, descrição e preço unitário. |
+| DELETE | `/api/itens-estoque/{id}` | Desativar sem excluir o histórico. |
+| PATCH | `/api/itens-estoque/{id}/ativacao` | Reativar ou desativar. |
+| POST | `/api/itens-estoque/{id}/entradas` | Estoquista registra entrada de quantidade. |
+| GET | `/api/itens-estoque/{id}/entradas` | Consultar o histórico de entradas. |
+
+Exemplos de corpo JSON: serviço `{"nome":"Alinhamento","descricao":"Eixos dianteiros","precoBase":120.00}`; peça `{"nome":"Filtro de óleo","tipo":"Peca","unidadeMedida":"un","precoUnitario":20.00}`; insumo `{"nome":"Óleo","tipo":"Insumo","unidadeMedida":"L","precoUnitario":15.50}`; entrada `{"quantidade":1.250}`. Os cadastros começam com saldo físico e reservado em zero. O preço aceita duas casas decimais; a quantidade aceita até três. Para peças, a quantidade deve ser inteira e a unidade deve ser `un`. Insumos aceitam quantidades fracionárias. Tipo e unidade de medida são definidos no cadastro inicial e não mudam na atualização.
+
+O saldo disponível é o físico menos o reservado. Nesta versão, uma entrada aumenta somente o saldo físico e grava um registro com instante UTC e usuário responsável. Cada atualização de saldo usa controle de concorrência; se outra operação alterou o item, a API responde `409` para que o saldo seja consultado antes de tentar novamente. Valor inválido retorna `400`, cadastro inexistente `404`, ausência de JWT `401` e papel sem permissão `403`. A migration `CriarCatalogoEEntradasEstoque` cria as tabelas e restrições ao iniciar a API.
+
 O SQL Server é apropriado aqui porque o domínio tem relacionamentos entre cliente, veículo, OS, orçamento e estoque; chaves, restrições e transações ajudam a preservar consistência, especialmente em futuras reservas e baixas. A equipe também já conhece esse banco. EF Core fornece mapeamento e migrations versionadas, e a imagem Developer permite desenvolvimento local reproduzível.
 
 ## Consultar a API
@@ -134,9 +159,7 @@ As configurações comuns ficam em `src/OficinaMecanicaFase1.Api/appsettings.jso
 
 ## Local previsto
 
-`C:\Users\Carol\Desktop\Docs-tech-challenge\oficina_mecanica\oficina-mecanica-fase-1`
-
-Copie o conteúdo desta pasta para esse local. Se já existir um repositório com trabalho anterior, integre estes arquivos nele e preserve seu histórico; não crie outro repositório paralelo.
+`C:\Users\Carol\Desktop\OficinaMecanicaFase1`
 
 ## Pré-requisitos
 
