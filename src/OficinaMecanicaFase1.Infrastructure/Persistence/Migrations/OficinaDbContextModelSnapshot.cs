@@ -320,6 +320,97 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Orcamentos.Aditivo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CriadoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("DecididoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("IdentificadoPorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ItemEstoqueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MotivoRejeicao")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("NomeItem")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NomeServico")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrdemServicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("OriginalPodeProsseguir")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("PrecoItem")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PrecoServico")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Quantidade")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<Guid?>("ServicoCatalogoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Situacao")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SituacaoReserva")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte[]>("Versao")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemEstoqueId");
+
+                    b.HasIndex("ServicoCatalogoId");
+
+                    b.HasIndex("OrdemServicoId", "CriadoEmUtc");
+
+                    b.ToTable("Aditivos", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Aditivos_Quantidade", "([ItemEstoqueId] IS NULL AND [Quantidade] = 0) OR ([ItemEstoqueId] IS NOT NULL AND [Quantidade] > 0)");
+
+                            t.HasCheckConstraint("CK_Aditivos_Valores", "[PrecoServico] >= 0 AND [PrecoItem] >= 0 AND [Total] >= 0");
+                        });
+                });
+
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.Orcamentos.LinhaOrcamento", b =>
                 {
                     b.Property<Guid>("Id")
@@ -732,6 +823,25 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         .HasForeignKey("OrdemServicoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Orcamentos.Aditivo", b =>
+                {
+                    b.HasOne("OficinaMecanicaFase1.Domain.Estoque.ItemEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("ItemEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", null)
+                        .WithMany()
+                        .HasForeignKey("OrdemServicoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OficinaMecanicaFase1.Domain.Catalogo.ServicoCatalogo", null)
+                        .WithMany()
+                        .HasForeignKey("ServicoCatalogoId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.Orcamentos.LinhaOrcamento", b =>

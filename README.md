@@ -215,7 +215,20 @@ A migration `ExecutarServicosERegistrarConsumoReal` persiste os marcos individua
 
 O SQL Server é apropriado aqui porque o domínio tem relacionamentos entre cliente, veículo, OS, orçamento e estoque; chaves, restrições e transações ajudam a preservar consistência, especialmente em futuras reservas e baixas. A equipe também já conhece esse banco. EF Core fornece mapeamento e migrations versionadas, e a imagem Developer permite desenvolvimento local reproduzível.
 
+## Etapa 11: aditivos e consumo excedente
+
+Durante `EmExecucao`, o Mecânico registra um reparo adicional ou a necessidade de consumir além da reserva em `POST /api/ordens-servico/{numero}/aditivos` (JWT de Mecânico). O corpo usa `tipo` 1 para `ReparoAdicional` ou 2 para `ConsumoExcedente`. Um reparo exige `servicoCatalogoId` novo e pode ter `itemEstoqueId` e `quantidade` (use `null` e `0` se não houver item). Consumo excedente exige um item já autorizado, sem serviço novo. Exemplo:
+
+```json
+{"tipo":2,"descricao":"Mais um filtro necessário","servicoCatalogoId":null,"itemEstoqueId":"GUID_DO_ITEM","quantidade":1,"originalPodeProsseguir":true}
+```
+
+A resposta registra preços vigentes, total, situação e `id` do aditivo. Apenas um aditivo fica pendente por vez; para vários reparos ou itens adicionais, registre e decida cada aditivo em sequência. O cliente consulta `POST /api/cliente/ordens-servico/{numero}/aditivos/{id}/consulta` com `{"documento":"CPF_OU_CNPJ"}`. Decide em `POST .../decisao` com `{"documento":"CPF_OU_CNPJ","codigoAcesso":"CODIGO_DA_OS","aprovar":true,"motivo":null}`. A consulta não revela o código. O Atendente pode reemiti-lo durante a execução em `POST /api/ordens-servico/{numero}/codigo-acesso/emissao`, informando motivo; o anterior perde a validade.
+
+A aprovação tenta reservar a quantidade adicional, sem baixar o estoque. Se faltar saldo, o aditivo fica com reserva `Recusada`; após a entrada de estoque, o Estoquista usa `POST /api/ordens-servico/{numero}/aditivos/{id}/reservas/tentativa`. Só a reserva `Confirmada` autoriza o serviço novo ou o consumo excedente. O consumo continua pela rota `POST /api/ordens-servico/{numero}/consumos` e só então reduz o saldo físico. Rejeição exige motivo e não autoriza o extra. Se `originalPodeProsseguir` for `false`, o impedimento fica registrado nos marcos e bloqueia início/conclusão de serviços e consumo; nenhum status novo é criado. Se for `true`, o original pode seguir, mas a OS não finaliza enquanto houver aditivo pendente ou sem reserva. O aditivo e seus preços ficam disponíveis na consulta interna `GET /api/ordens-servico/{numero}/aditivos/{id}`.
+
 ## Consultar a API
+
 
 No PowerShell, dentro da raiz do repositório:
 

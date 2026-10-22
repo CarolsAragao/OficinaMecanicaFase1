@@ -40,4 +40,11 @@ public sealed class ReservaItemOrdemServico
             throw new InvalidOperationException("O consumo excede a quantidade ainda reservada para a OS.");
         QuantidadeConsumida += quantidade;
     }
+
+    public void Acrescentar(decimal quantidade)
+    {
+        if (LiberadaEmUtc is not null || quantidade <= 0 || decimal.Round(quantidade, 3) != quantidade)
+            throw new InvalidOperationException("A reserva adicional é inválida.");
+        Quantidade = checked(Quantidade + quantidade);
+    }
 }

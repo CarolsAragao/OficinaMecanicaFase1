@@ -26,8 +26,10 @@ public sealed class GerenciadorDecisaoOrcamento(
         var ordem = await repositorio.ObterAsync(numero, cancelamento);
         if (ordem is null) return NaoEncontrado<CodigoAcessoEmitido>();
         var orcamento = await repositorio.ObterOrcamentoAsync(ordem.Id, cancelamento);
-        if (orcamento is null || orcamento.Decisao != DecisaoOrcamento.Pendente)
-            return Conflito<CodigoAcessoEmitido>("O orçamento não está pendente de decisão.");
+        if (orcamento is null || (orcamento.Decisao != DecisaoOrcamento.Pendente &&
+            !(orcamento.Decisao == DecisaoOrcamento.Aprovado &&
+              ordem.Status == OficinaMecanicaFase1.Domain.OrdensServico.StatusOrdemServico.EmExecucao)))
+            return Conflito<CodigoAcessoEmitido>("Não há decisão pendente ou execução para emissão do código.");
 
         var bytes = RandomNumberGenerator.GetBytes(12);
         var hex = Convert.ToHexString(bytes);

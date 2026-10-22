@@ -144,6 +144,7 @@ app.MapearCatalogoEstoque();
 app.MapearOrdensServico();
 app.MapearAvisosEstoque();
 app.MapearClienteOrcamento();
+app.MapearAditivos();
 
 app.Run();
 

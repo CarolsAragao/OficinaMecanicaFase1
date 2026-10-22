@@ -33,9 +33,15 @@ public sealed class RepositorioExecucao(DbContextOptions<OficinaDbContext> opcoe
         long numero, Guid servicoId, Guid mecanicoId, DateTimeOffset agora, CancellationToken cancelamento) =>
         ExecutarAsync(numero, (db, ordem, orcamento) =>
         {
-            if (orcamento?.Decisao != DecisaoOrcamento.Aprovado || !orcamento.Linhas.Any(linha =>
-                    linha.Tipo == TipoLinhaOrcamento.Servico && linha.ReferenciaId == servicoId))
+            if (orcamento?.Decisao != DecisaoOrcamento.Aprovado ||
+                (!orcamento.Linhas.Any(linha => linha.Tipo == TipoLinhaOrcamento.Servico && linha.ReferenciaId == servicoId) &&
+                 !db.Aditivos.Any(a => a.OrdemServicoId == ordem.Id && a.ServicoCatalogoId == servicoId &&
+                     a.Situacao == SituacaoAditivo.Aprovado && a.SituacaoReserva == SituacaoReservaAditivo.Confirmada)))
                 return Task.FromResult(Invalido(ordem, "O serviço não está autorizado pelo orçamento aprovado."));
+            if (db.Aditivos.Any(a => a.OrdemServicoId == ordem.Id && !a.OriginalPodeProsseguir &&
+                (a.Situacao == SituacaoAditivo.Pendente || a.Situacao == SituacaoAditivo.Rejeitado ||
+                 (a.Situacao == SituacaoAditivo.Aprovado && a.SituacaoReserva != SituacaoReservaAditivo.Confirmada))))
+                return Task.FromResult(Invalido(ordem, "A execução está impedida por um aditivo não autorizado."));
             db.Set<MarcoOrdemServico>().Add(ordem.IniciarServico(servicoId, mecanicoId, agora));
             return Task.FromResult(ResultadoOrdemServico<OrdemServico>.Sucesso(ordem));
         }, cancelamento);
@@ -44,9 +50,18 @@ public sealed class RepositorioExecucao(DbContextOptions<OficinaDbContext> opcoe
         long numero, Guid servicoId, Guid mecanicoId, DateTimeOffset agora, CancellationToken cancelamento) =>
         ExecutarAsync(numero, async (db, ordem, orcamento) =>
         {
-            if (orcamento?.Decisao != DecisaoOrcamento.Aprovado || !orcamento.Linhas.Any(linha =>
-                    linha.Tipo == TipoLinhaOrcamento.Servico && linha.ReferenciaId == servicoId))
+            if (orcamento?.Decisao != DecisaoOrcamento.Aprovado ||
+                (!orcamento.Linhas.Any(linha => linha.Tipo == TipoLinhaOrcamento.Servico && linha.ReferenciaId == servicoId) &&
+                 !await db.Aditivos.AnyAsync(a => a.OrdemServicoId == ordem.Id && a.ServicoCatalogoId == servicoId &&
+                     a.Situacao == SituacaoAditivo.Aprovado && a.SituacaoReserva == SituacaoReservaAditivo.Confirmada, cancelamento)))
                 return Invalido(ordem, "O serviço não está autorizado pelo orçamento aprovado.");
+            var ultimoServico = ordem.ServicosSolicitados.Count(s => s.ConcluidoEmUtc is null) == 1;
+            if (await db.Aditivos.AnyAsync(a => a.OrdemServicoId == ordem.Id &&
+                ((a.Situacao == SituacaoAditivo.Pendente ||
+                  (a.Situacao == SituacaoAditivo.Aprovado && a.SituacaoReserva != SituacaoReservaAditivo.Confirmada)) &&
+                  (!a.OriginalPodeProsseguir || ultimoServico)) ||
+                 (a.Situacao == SituacaoAditivo.Rejeitado && !a.OriginalPodeProsseguir), cancelamento))
+                return Invalido(ordem, "Há aditivo pendente, sem reserva ou impedimento registrado.");
             var ids = await db.ReservasItensOrdensServico.Where(reserva =>
                     reserva.OrdemServicoId == ordem.Id && reserva.LiberadaEmUtc == null)
                 .Select(reserva => reserva.ItemEstoqueId).Distinct().OrderBy(id => id).ToArrayAsync(cancelamento);
@@ -74,14 +89,22 @@ public sealed class RepositorioExecucao(DbContextOptions<OficinaDbContext> opcoe
         {
             if (ordem.Status != StatusOrdemServico.EmExecucao)
                 return Invalido(ordem, "O consumo só pode ser registrado durante a execução.");
+            if (await db.Aditivos.AnyAsync(a => a.OrdemServicoId == ordem.Id && !a.OriginalPodeProsseguir &&
+                (a.Situacao == SituacaoAditivo.Pendente || a.Situacao == SituacaoAditivo.Rejeitado ||
+                 (a.Situacao == SituacaoAditivo.Aprovado && a.SituacaoReserva != SituacaoReservaAditivo.Confirmada)), cancelamento))
+                return Invalido(ordem, "O consumo está impedido por um aditivo não autorizado.");
             if (consumos.Count == 0 || consumos.Any(consumo => consumo.ItemEstoqueId == Guid.Empty) ||
                 consumos.Select(consumo => consumo.ItemEstoqueId).Distinct().Count() != consumos.Count)
                 return Invalido(ordem, "Informe itens de consumo válidos, sem repetições.");
             if (orcamento?.Decisao != DecisaoOrcamento.Aprovado)
                 return Invalido(ordem, "O consumo exige orçamento aprovado.");
             foreach (var consumo in consumos)
-                if (!ordem.AutorizaItem(consumo.ItemEstoqueId) || !orcamento.Linhas.Any(linha =>
-                        linha.Tipo == TipoLinhaOrcamento.Item && linha.ReferenciaId == consumo.ItemEstoqueId))
+                if (!ordem.AutorizaItem(consumo.ItemEstoqueId) ||
+                    (!orcamento.Linhas.Any(linha => linha.Tipo == TipoLinhaOrcamento.Item &&
+                        linha.ReferenciaId == consumo.ItemEstoqueId) &&
+                     !await db.Aditivos.AnyAsync(a => a.OrdemServicoId == ordem.Id &&
+                         a.ItemEstoqueId == consumo.ItemEstoqueId && a.Situacao == SituacaoAditivo.Aprovado &&
+                         a.SituacaoReserva == SituacaoReservaAditivo.Confirmada, cancelamento)))
                     return Invalido(ordem, "O item não está autorizado pelo orçamento aprovado.");
 
             var itens = await BloquearItensAsync(db, consumos.Select(consumo => consumo.ItemEstoqueId)

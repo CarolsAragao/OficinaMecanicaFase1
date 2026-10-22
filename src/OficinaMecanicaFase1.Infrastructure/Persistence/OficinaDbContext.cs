@@ -17,6 +17,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
     public DbSet<EntradaEstoque> EntradasEstoque => Set<EntradaEstoque>();
     public DbSet<OrdemServico> OrdensServico => Set<OrdemServico>();
     public DbSet<Orcamento> Orcamentos => Set<Orcamento>();
+    public DbSet<Aditivo> Aditivos => Set<Aditivo>();
     public DbSet<ReservaItemOrdemServico> ReservasItensOrdensServico => Set<ReservaItemOrdemServico>();
     public DbSet<AvisoReservaRecusada> AvisosReservaRecusada => Set<AvisoReservaRecusada>();
     public DbSet<ConsumoItemOrdemServico> ConsumosItensOrdensServico => Set<ConsumoItemOrdemServico>();
@@ -255,6 +256,35 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.HasMany(orcamento => orcamento.Linhas).WithOne().HasForeignKey(linha => linha.OrcamentoId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.Navigation(orcamento => orcamento.Linhas).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<Aditivo>(entity =>
+        {
+            entity.ToTable("Aditivos", table =>
+            {
+                table.HasCheckConstraint("CK_Aditivos_Quantidade", "([ItemEstoqueId] IS NULL AND [Quantidade] = 0) OR ([ItemEstoqueId] IS NOT NULL AND [Quantidade] > 0)");
+                table.HasCheckConstraint("CK_Aditivos_Valores", "[PrecoServico] >= 0 AND [PrecoItem] >= 0 AND [Total] >= 0");
+            });
+            entity.HasKey(aditivo => aditivo.Id);
+            entity.HasIndex(aditivo => new { aditivo.OrdemServicoId, aditivo.CriadoEmUtc });
+            entity.Property(aditivo => aditivo.Tipo).HasConversion<int>();
+            entity.Property(aditivo => aditivo.Situacao).HasConversion<int>();
+            entity.Property(aditivo => aditivo.SituacaoReserva).HasConversion<int>();
+            entity.Property(aditivo => aditivo.Descricao).HasMaxLength(1000).IsRequired();
+            entity.Property(aditivo => aditivo.NomeServico).HasMaxLength(200);
+            entity.Property(aditivo => aditivo.NomeItem).HasMaxLength(200);
+            entity.Property(aditivo => aditivo.MotivoRejeicao).HasMaxLength(1000);
+            entity.Property(aditivo => aditivo.Quantidade).HasPrecision(18, 3);
+            entity.Property(aditivo => aditivo.PrecoServico).HasPrecision(18, 2);
+            entity.Property(aditivo => aditivo.PrecoItem).HasPrecision(18, 2);
+            entity.Property(aditivo => aditivo.Total).HasPrecision(18, 2);
+            entity.Property(aditivo => aditivo.Versao).IsRowVersion();
+            entity.HasOne<OrdemServico>().WithMany().HasForeignKey(aditivo => aditivo.OrdemServicoId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ServicoCatalogo>().WithMany().HasForeignKey(aditivo => aditivo.ServicoCatalogoId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ItemEstoque>().WithMany().HasForeignKey(aditivo => aditivo.ItemEstoqueId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<LinhaOrcamento>(entity =>

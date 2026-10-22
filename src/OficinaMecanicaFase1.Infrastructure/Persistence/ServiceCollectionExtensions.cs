@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<GerenciadorReservas>();
         services.AddScoped<IRepositorioExecucao, RepositorioExecucao>();
         services.AddScoped<GerenciadorExecucao>();
+        services.AddScoped<GerenciadorAditivos>();
 
         services.AddDbContext<IdentidadeDbContext>(options =>
             options.UseSqlServer(connectionString, sql => sql

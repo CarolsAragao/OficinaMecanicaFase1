@@ -135,8 +135,8 @@ public sealed class OrdemServico
     public EmissaoCodigoAcesso EmitirCodigoAcesso(byte[] hash, Guid atendenteId,
         string? motivo, DateTimeOffset agora)
     {
-        if (Status != StatusOrdemServico.AguardandoAprovacao ||
-            OrcamentoAprovadoEmUtc is not null || EncerradaPorRejeicaoEmUtc is not null)
+        if ((Status != StatusOrdemServico.AguardandoAprovacao && Status != StatusOrdemServico.EmExecucao) ||
+            EncerradaPorRejeicaoEmUtc is not null)
             throw new InvalidOperationException("O código só pode ser emitido para um orçamento pendente.");
         if (hash.Length != 32) throw new ArgumentException("Hash do código inválido.", nameof(hash));
         if (atendenteId == Guid.Empty) throw new ArgumentException("Informe o atendente.", nameof(atendenteId));
@@ -256,4 +256,33 @@ public sealed class OrdemServico
 
     public bool AutorizaItem(Guid itemEstoqueId) =>
         _itensNecessarios.Any(item => item.ItemEstoqueId == itemEstoqueId);
+
+    public MarcoOrdemServico RegistrarMarcoAditivo(string descricao, DateTimeOffset agora)
+    {
+        if (Status != StatusOrdemServico.EmExecucao)
+            throw new InvalidOperationException("Aditivos só podem ser registrados durante a execução.");
+        var marco = new MarcoOrdemServico(Id, Status, descricao, agora);
+        _marcos.Add(marco);
+        return marco;
+    }
+
+    public (ServicoSolicitado? Servico, ItemNecessario? Item) AutorizarAditivo(
+        Guid? servicoId, Guid? itemId, decimal quantidade)
+    {
+        if (Status != StatusOrdemServico.EmExecucao)
+            throw new InvalidOperationException("A OS não está em execução.");
+        ServicoSolicitado? novoServico = null;
+        ItemNecessario? novoItem = null;
+        if (servicoId is { } id && _servicosSolicitados.All(s => s.ServicoCatalogoId != id))
+        {
+            novoServico = new ServicoSolicitado(Id, id);
+            _servicosSolicitados.Add(novoServico);
+        }
+        if (itemId is { } estoqueId && _itensNecessarios.All(i => i.ItemEstoqueId != estoqueId))
+        {
+            novoItem = new ItemNecessario(Id, estoqueId, quantidade, 0);
+            _itensNecessarios.Add(novoItem);
+        }
+        return (novoServico, novoItem);
+    }
 }
