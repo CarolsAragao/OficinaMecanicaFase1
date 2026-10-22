@@ -34,6 +34,8 @@ public sealed class ServicoSolicitado
         if (mecanicoId == Guid.Empty) throw new ArgumentException("Informe o mecânico.", nameof(mecanicoId));
         if (IniciadoEmUtc is null) throw new InvalidOperationException("Inicie o serviço antes de concluí-lo.");
         if (ConcluidoEmUtc is not null) throw new InvalidOperationException("O serviço já foi concluído.");
+        if (agora.ToUniversalTime() < IniciadoEmUtc.Value)
+            throw new InvalidOperationException("A conclusão não pode ser anterior ao início do serviço.");
         ConcluidoEmUtc = agora.ToUniversalTime();
         ConcluidoPorId = mecanicoId;
     }

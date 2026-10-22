@@ -681,6 +681,35 @@ public sealed class OrdensServicoTests
         Assert.Equal(0m, itemParcial.SaldoDisponivel);
         Assert.Equal(HttpStatusCode.OK, (await interno.PostAsync(
             $"{rota}/servicos/{servicoFreio.Id}/conclusao", null)).StatusCode);
+        var rotaGestao = "/api/administracao/ordens-servico";
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await publico.GetAsync(rotaGestao)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await interno.GetAsync(rotaGestao + "/indicadores/tempo-medio")).StatusCode);
+        await AutenticarAsync(interno, "admin@execucao.test", "AdminDeTeste123!");
+        var lista = await interno.GetFromJsonAsync<PaginaOrdensServicoResponse>(
+            rotaGestao + "?status=EmExecucao&pagina=1&tamanhoPagina=1");
+        Assert.NotNull(lista);
+        Assert.Equal(1, lista.Total);
+        Assert.Single(lista.Ordens);
+        Assert.Equal(numero, lista.Ordens[0].Numero);
+        Assert.Equal(1, lista.Ordens[0].ServicosConcluidos);
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await interno.GetAsync(rotaGestao + "?tamanhoPagina=101")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await interno.GetAsync(rotaGestao + "/999999999")).StatusCode);
+        var detalhe = await interno.GetFromJsonAsync<OrdemServicoResponse>($"{rotaGestao}/{numero}");
+        Assert.Equal(2, detalhe!.ServicosSolicitados.Length);
+        var parcial = await interno.GetFromJsonAsync<IndicadorTempoMedioResponse>(
+            rotaGestao + "/indicadores/tempo-medio");
+        Assert.NotNull(parcial);
+        Assert.True(parcial.IncluiPausasEImpedimentos);
+        Assert.Equal("segundos", parcial.Unidade);
+        Assert.Equal(1, parcial.QuantidadeTotalConcluida);
+        Assert.Single(parcial.Servicos);
+        Assert.Equal(servicoFreio.Id, parcial.Servicos[0].ServicoCatalogoId);
+        Assert.Equal(1, parcial.Servicos[0].QuantidadeConcluida);
+        await AutenticarAsync(interno, "mecanico@execucao.test", "MecanicoDeTeste123!");
         var finalizada = await interno.PostAsync($"{rota}/servicos/{servicoRevisao.Id}/conclusao", null);
         Assert.Equal(HttpStatusCode.OK, finalizada.StatusCode);
         var ordemFinalizada = (await finalizada.Content.ReadFromJsonAsync<OrdemServicoResponse>())!;
@@ -692,6 +721,14 @@ public sealed class OrdensServicoTests
             Assert.NotNull(servico.IniciadoPorId);
             Assert.NotNull(servico.ConcluidoPorId);
         });
+        await AutenticarAsync(interno, "admin@execucao.test", "AdminDeTeste123!");
+        var completo = await interno.GetFromJsonAsync<IndicadorTempoMedioResponse>(
+            rotaGestao + "/indicadores/tempo-medio");
+        Assert.NotNull(completo);
+        Assert.Equal(2, completo.QuantidadeTotalConcluida);
+        Assert.Equal(2, completo.Servicos.Length);
+        Assert.NotNull(completo.MediaGeralSegundos);
+        await AutenticarAsync(interno, "mecanico@execucao.test", "MecanicoDeTeste123!");
         var itemFinal = (await interno.GetFromJsonAsync<ItemEstoqueResponse>($"/api/itens-estoque/{item.Id}"))!;
         Assert.Equal(1m, itemFinal.SaldoFisico);
         Assert.Equal(0m, itemFinal.SaldoReservado);

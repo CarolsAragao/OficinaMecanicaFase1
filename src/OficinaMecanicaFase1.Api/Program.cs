@@ -142,6 +142,7 @@ app.MapearAcessoInterno();
 app.MapearCadastros();
 app.MapearCatalogoEstoque();
 app.MapearOrdensServico();
+app.MapearGestaoOrdensServico();
 app.MapearAvisosEstoque();
 app.MapearClienteOrcamento();
 app.MapearAditivos();

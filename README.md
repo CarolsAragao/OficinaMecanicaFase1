@@ -233,6 +233,24 @@ Quando o Mecânico conclui o último serviço autorizado, a OS passa a `Finaliza
 
 O cliente consulta `POST /api/cliente/ordens-servico/{numero}/andamento/consulta` com `{"documento":"529.982.247-25"}`. A rota é pública, mas só retorna dados quando número da OS e CPF/CNPJ correspondem; caso contrário, retorna `404`. A resposta contém somente `numero`, `status`, `ultimaAtualizacaoEmUtc` e `marcos` (status, descrição e instante). A última atualização é o instante do marco mais recente. Documento, preços, diagnóstico e notas internas não são expostos nessa consulta, conforme D-14.
 
+## Gestão de ordens de serviço e tempo médio
+
+O Administrador usa JWT nas consultas `GET /api/administracao/ordens-servico`,
+`GET /api/administracao/ordens-servico/{numero}` e
+`GET /api/administracao/ordens-servico/indicadores/tempo-medio`. A listagem aceita
+`status` com um dos seis nomes oficiais, `pagina` (padrão 1) e `tamanhoPagina`
+(padrão 20, máximo 100). Retorna total de OS, página e resumos ordenados pelas
+mais recentes. O detalhe mostra o histórico e os instantes de cada serviço.
+Sem token a API responde `401`; um papel diferente de Administrador recebe `403`.
+
+O indicador agrupa as durações por serviço do catálogo e informa a média geral,
+em segundos. Cada duração é o tempo decorrido entre o início e a conclusão do
+serviço, com instantes em UTC. **Pausas e impedimentos fazem parte desse tempo**.
+Serviços ainda não concluídos ficam fora da contagem e da média. Se nenhum
+serviço estiver concluído, `quantidadeTotalConcluida` é zero,
+`mediaGeralSegundos` é `null` e `servicos` é uma lista vazia. A resposta inclui
+essa definição, a unidade e o campo `incluiPausasEImpedimentos`.
+
 ## Consultar a API
 
 

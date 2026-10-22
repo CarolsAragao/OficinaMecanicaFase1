@@ -26,6 +26,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<GerenciadorCatalogo>();
         services.AddScoped<IRepositorioOrdensServico, RepositorioOrdensServico>();
         services.AddScoped<GerenciadorOrdensServico>();
+        services.AddScoped<IConsultaGestaoOrdensServico, RepositorioConsultaGestaoOrdensServico>();
+        services.AddScoped<ConsultaGestaoOrdensServico>();
         services.AddScoped<GerenciadorDecisaoOrcamento>();
         services.AddScoped<IRepositorioReservas, RepositorioReservas>();
         services.AddScoped<GerenciadorReservas>();
