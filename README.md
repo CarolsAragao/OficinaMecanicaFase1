@@ -92,6 +92,8 @@ docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -
 
 O teste de integração cria um SQL Server descartável próprio por meio do Testcontainers, aplica a migration, grava um registro e lê o mesmo registro em outro `DbContext`. Docker Desktop deve estar ligado para `dotnet test`. O comando `sqlcmd` solicita a senha interativamente. Os testes não usam o volume da aplicação.
 
+Para medir a cobertura das regras de domínio, execute `dotnet test .\OficinaMecanicaFase1.slnx -c Release --settings .\coverage.runsettings --collect:"XPlat Code Coverage" --results-directory .\TestResults`. O relatório resumido está em `docs/cobertura-dominio.md`; o XML Cobertura gerado fica em `TestResults` e não é versionado.
+
 ## Clientes e veículos
 
 As rotas abaixo exigem o JWT obtido em `POST /api/interno/autenticacao`. `Administrador` e `Atendente` podem cadastrar, consultar e atualizar. Só `Administrador` pode excluir. Os campos de cliente são `nome` e `documento`; os de veículo são `clienteId`, `placa`, `marca`, `modelo` e `ano`. Na atualização de veículo, envie apenas `placa`, `marca`, `modelo` e `ano`: o proprietário permanece o mesmo.
