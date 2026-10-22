@@ -17,6 +17,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
     public DbSet<EntradaEstoque> EntradasEstoque => Set<EntradaEstoque>();
     public DbSet<OrdemServico> OrdensServico => Set<OrdemServico>();
     public DbSet<Orcamento> Orcamentos => Set<Orcamento>();
+    public DbSet<ReservaItemOrdemServico> ReservasItensOrdensServico => Set<ReservaItemOrdemServico>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -113,6 +114,9 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.Property(ordem => ordem.Status).HasConversion<int>().IsRequired();
             entity.Property(ordem => ordem.CriadaEmUtc).IsRequired();
             entity.Property(ordem => ordem.DiagnosticoDescricao).HasMaxLength(4000);
+            entity.Property(ordem => ordem.CodigoAcessoHash).HasMaxLength(32);
+            entity.Property(ordem => ordem.MotivoEncerramento).HasMaxLength(1000);
+            entity.Property(ordem => ordem.Versao).IsRowVersion();
             entity.HasIndex(ordem => new { ordem.Status, ordem.CriadaEmUtc });
             entity.HasOne<Cliente>().WithMany().HasForeignKey(ordem => ordem.ClienteId)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -163,17 +167,47 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.HasIndex(marco => new { marco.OrdemServicoId, marco.RegistradoEmUtc });
         });
 
+        modelBuilder.Entity<EmissaoCodigoAcesso>(entity =>
+        {
+            entity.ToTable("EmissoesCodigoAcessoOS", table =>
+                table.HasCheckConstraint("CK_EmissoesCodigoAcessoOS_Numero", "[NumeroEmissao] > 0"));
+            entity.HasKey(emissao => emissao.Id);
+            entity.Property(emissao => emissao.Motivo).HasMaxLength(500);
+            entity.Property(emissao => emissao.EmitidoEmUtc).IsRequired();
+            entity.HasIndex(emissao => new { emissao.OrdemServicoId, emissao.NumeroEmissao }).IsUnique();
+            entity.HasOne<OrdemServico>().WithMany().HasForeignKey(emissao => emissao.OrdemServicoId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ReservaItemOrdemServico>(entity =>
+        {
+            entity.ToTable("ReservasItensOrdensServico", table =>
+                table.HasCheckConstraint("CK_ReservasItensOrdensServico_Quantidade", "[Quantidade] > 0"));
+            entity.HasKey(reserva => reserva.Id);
+            entity.Property(reserva => reserva.Quantidade).HasPrecision(18, 3).IsRequired();
+            entity.Property(reserva => reserva.ReservadaEmUtc).IsRequired();
+            entity.HasIndex(reserva => new { reserva.OrdemServicoId, reserva.LiberadaEmUtc });
+            entity.HasOne<OrdemServico>().WithMany().HasForeignKey(reserva => reserva.OrdemServicoId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ItemEstoque>().WithMany().HasForeignKey(reserva => reserva.ItemEstoqueId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<Orcamento>(entity =>
         {
             entity.ToTable("Orcamentos", table =>
             {
                 table.HasCheckConstraint("CK_Orcamentos_Valores", "[TotalServicos] >= 0 AND [TotalItens] >= 0 AND [Total] = [TotalServicos] + [TotalItens]");
+                table.HasCheckConstraint("CK_Orcamentos_Decisao", "[Decisao] IN (0, 1, 2)");
             });
             entity.HasKey(orcamento => orcamento.Id);
             entity.Property(orcamento => orcamento.GeradoEmUtc).IsRequired();
             entity.Property(orcamento => orcamento.TotalServicos).HasPrecision(18, 2).IsRequired();
             entity.Property(orcamento => orcamento.TotalItens).HasPrecision(18, 2).IsRequired();
             entity.Property(orcamento => orcamento.Total).HasPrecision(18, 2).IsRequired();
+            entity.Property(orcamento => orcamento.Decisao).HasConversion<int>().IsRequired();
+            entity.Property(orcamento => orcamento.MotivoRejeicao).HasMaxLength(1000);
+            entity.Property(orcamento => orcamento.Versao).IsRowVersion();
             entity.HasIndex(orcamento => orcamento.OrdemServicoId).IsUnique();
             entity.HasOne<OrdemServico>().WithMany().HasForeignKey(orcamento => orcamento.OrdemServicoId)
                 .OnDelete(DeleteBehavior.Restrict);

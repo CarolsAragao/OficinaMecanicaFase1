@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 namespace OficinaMecanicaFase1.Domain.OrdensServico;
 
 public sealed class OrdemServico
@@ -18,6 +20,13 @@ public sealed class OrdemServico
     public DateTimeOffset? DiagnosticoRegistradoEmUtc { get; private set; }
     public Guid? DiagnosticoRegistradoPorId { get; private set; }
     public string? DiagnosticoDescricao { get; private set; }
+    public byte[]? CodigoAcessoHash { get; private set; }
+    public int NumeroEmissoesCodigoAcesso { get; private set; }
+    public DateTimeOffset? CodigoAcessoEmitidoEmUtc { get; private set; }
+    public DateTimeOffset? OrcamentoAprovadoEmUtc { get; private set; }
+    public DateTimeOffset? EncerradaPorRejeicaoEmUtc { get; private set; }
+    public string? MotivoEncerramento { get; private set; }
+    public byte[] Versao { get; private set; } = [];
     public IReadOnlyCollection<ServicoSolicitado> ServicosSolicitados => _servicosSolicitados;
     public IReadOnlyCollection<ItemNecessario> ItensNecessarios => _itensNecessarios;
     public IReadOnlyCollection<MarcoOrdemServico> Marcos => _marcos;
@@ -111,5 +120,56 @@ public sealed class OrdemServico
         var marco = new MarcoOrdemServico(Id, Status, "Orçamento disponibilizado", agora);
         _marcos.Add(marco);
         return marco;
+    }
+
+    public EmissaoCodigoAcesso EmitirCodigoAcesso(byte[] hash, Guid atendenteId,
+        string? motivo, DateTimeOffset agora)
+    {
+        if (Status != StatusOrdemServico.AguardandoAprovacao ||
+            OrcamentoAprovadoEmUtc is not null || EncerradaPorRejeicaoEmUtc is not null)
+            throw new InvalidOperationException("O código só pode ser emitido para um orçamento pendente.");
+        if (hash.Length != 32) throw new ArgumentException("Hash do código inválido.", nameof(hash));
+        if (atendenteId == Guid.Empty) throw new ArgumentException("Informe o atendente.", nameof(atendenteId));
+        if (NumeroEmissoesCodigoAcesso > 0 && string.IsNullOrWhiteSpace(motivo))
+            throw new ArgumentException("Informe o motivo da reemissão.", nameof(motivo));
+        if (motivo?.Trim().Length > 500)
+            throw new ArgumentException("O motivo deve ter até 500 caracteres.", nameof(motivo));
+        CodigoAcessoHash = hash.ToArray();
+        CodigoAcessoEmitidoEmUtc = agora.ToUniversalTime();
+        NumeroEmissoesCodigoAcesso++;
+        return new EmissaoCodigoAcesso(Id, NumeroEmissoesCodigoAcesso, atendenteId,
+            string.IsNullOrWhiteSpace(motivo) ? null : motivo.Trim(), agora);
+    }
+
+    public bool ValidarCodigoAcesso(byte[] hash) =>
+        CodigoAcessoHash is { Length: 32 } && hash.Length == 32 &&
+        CryptographicOperations.FixedTimeEquals(CodigoAcessoHash, hash);
+
+    public MarcoOrdemServico RegistrarAprovacaoOrcamento(DateTimeOffset agora)
+    {
+        if (Status != StatusOrdemServico.AguardandoAprovacao ||
+            OrcamentoAprovadoEmUtc is not null || EncerradaPorRejeicaoEmUtc is not null)
+            throw new InvalidOperationException("A OS não aguarda decisão do orçamento.");
+        OrcamentoAprovadoEmUtc = agora.ToUniversalTime();
+        var marco = new MarcoOrdemServico(Id, Status, "Orçamento aprovado", agora);
+        _marcos.Add(marco);
+        return marco;
+    }
+
+    public (MarcoOrdemServico Rejeicao, MarcoOrdemServico Encerramento) EncerrarPorRejeicao(
+        string motivo, DateTimeOffset agora)
+    {
+        if (Status != StatusOrdemServico.AguardandoAprovacao ||
+            OrcamentoAprovadoEmUtc is not null || EncerradaPorRejeicaoEmUtc is not null)
+            throw new InvalidOperationException("A OS não aguarda decisão do orçamento.");
+        if (string.IsNullOrWhiteSpace(motivo) || motivo.Trim().Length > 1000)
+            throw new ArgumentException("Informe o motivo da rejeição em até 1000 caracteres.", nameof(motivo));
+        EncerradaPorRejeicaoEmUtc = agora.ToUniversalTime();
+        MotivoEncerramento = motivo.Trim();
+        var rejeicao = new MarcoOrdemServico(Id, Status, "Orçamento rejeitado", agora);
+        var encerramento = new MarcoOrdemServico(Id, Status, "OS encerrada por rejeição", agora);
+        _marcos.Add(rejeicao);
+        _marcos.Add(encerramento);
+        return (rejeicao, encerramento);
     }
 }

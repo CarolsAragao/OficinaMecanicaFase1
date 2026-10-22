@@ -48,6 +48,20 @@ public sealed class ItemEstoque
 
     public void DefinirAtivo(bool ativo) => Ativo = ativo;
 
+    public void Reservar(decimal quantidade)
+    {
+        if (!QuantidadeValida(quantidade) || quantidade > SaldoDisponivel)
+            throw new InvalidOperationException("Saldo disponível insuficiente para a reserva.");
+        SaldoReservado += quantidade;
+    }
+
+    public void LiberarReserva(decimal quantidade)
+    {
+        if (!QuantidadeValida(quantidade) || quantidade > SaldoReservado)
+            throw new InvalidOperationException("A quantidade a liberar excede a reserva do item.");
+        SaldoReservado -= quantidade;
+    }
+
     public EntradaEstoque RegistrarEntrada(decimal quantidade, DateTimeOffset registradaEmUtc, Guid usuarioId)
     {
         if (!QuantidadeValida(quantidade))

@@ -71,6 +71,7 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("AtendentesEMecanicos", policy => policy.RequireAuthenticatedUser().RequireRole(
         PapeisInternos.Atendente, PapeisInternos.Mecanico))
     .AddPolicy("Mecanicos", policy => policy.RequireAuthenticatedUser().RequireRole(PapeisInternos.Mecanico))
+    .AddPolicy("Atendentes", policy => policy.RequireAuthenticatedUser().RequireRole(PapeisInternos.Atendente))
     .AddPolicy("Estoquistas", policy => policy.RequireAuthenticatedUser().RequireRole(PapeisInternos.Estoquista))
     .AddPolicy("Administradores", policy => policy.RequireAuthenticatedUser().RequireRole(PapeisInternos.Administrador));
 
@@ -141,6 +142,7 @@ app.MapearAcessoInterno();
 app.MapearCadastros();
 app.MapearCatalogoEstoque();
 app.MapearOrdensServico();
+app.MapearClienteOrcamento();
 
 app.Run();
 

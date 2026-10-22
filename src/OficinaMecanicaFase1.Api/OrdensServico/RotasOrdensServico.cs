@@ -64,6 +64,13 @@ public static class RotasOrdensServico
             .Produces<OrcamentoResponse>()
             .Produces(404).Produces(401).Produces(403);
 
+        ordens.MapPost("/{numero:long}/codigo-acesso/emissao", EmitirCodigoAcessoAsync)
+            .WithName("EmitirCodigoAcessoOrdemServico")
+            .WithSummary("Atendente emite o código individual para decisão do cliente; reemissão exige motivo e invalida o código anterior.")
+            .RequireAuthorization("Atendentes")
+            .Produces<CodigoAcessoResponse>()
+            .ProducesValidationProblem().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
         return app;
     }
 
@@ -137,6 +144,19 @@ public static class RotasOrdensServico
     {
         var orcamento = await gerenciador.ObterOrcamentoAsync(numero, cancelamento);
         return orcamento is null ? Results.NotFound() : Results.Ok(OrcamentoResponse.De(orcamento, numero));
+    }
+
+    private static async Task<IResult> EmitirCodigoAcessoAsync(long numero,
+        EmitirCodigoAcessoRequest entrada, ClaimsPrincipal usuario, HttpContext contexto,
+        GerenciadorDecisaoOrcamento gerenciador, CancellationToken cancelamento)
+    {
+        if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var atendenteId)) return Results.Forbid();
+        contexto.Response.Headers.CacheControl = "no-store";
+        var resultado = await gerenciador.EmitirCodigoAsync(numero, atendenteId, entrada.Motivo, cancelamento);
+        return resultado.Erro == ErroOrdemServico.Nenhum
+            ? Results.Ok(new CodigoAcessoResponse(numero, resultado.Valor!.Codigo,
+                resultado.Valor.NumeroEmissao, resultado.Valor.EmitidoEmUtc))
+            : ResponderErro(resultado);
     }
 
     private static IResult ResponderErro<T>(ResultadoOrdemServico<T> resultado) => resultado.Erro switch

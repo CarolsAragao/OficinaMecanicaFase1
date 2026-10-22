@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<GerenciadorCatalogo>();
         services.AddScoped<IRepositorioOrdensServico, RepositorioOrdensServico>();
         services.AddScoped<GerenciadorOrdensServico>();
+        services.AddScoped<GerenciadorDecisaoOrcamento>();
 
         services.AddDbContext<IdentidadeDbContext>(options =>
             options.UseSqlServer(connectionString, sql => sql

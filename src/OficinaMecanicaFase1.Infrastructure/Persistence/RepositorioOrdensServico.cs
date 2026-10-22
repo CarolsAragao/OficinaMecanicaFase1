@@ -43,15 +43,30 @@ public sealed class RepositorioOrdensServico(OficinaDbContext db) : IRepositorio
             .Include(ordem => ordem.Marcos)
             .FirstOrDefaultAsync(ordem => ordem.Numero == numero, cancelamento);
 
+    public Task<OrdemServico?> ObterDoClienteAsync(long numero, string documento, CancellationToken cancelamento) =>
+        db.OrdensServico.FirstOrDefaultAsync(ordem => ordem.Numero == numero &&
+            db.Clientes.Any(cliente => cliente.Id == ordem.ClienteId && cliente.Documento == documento), cancelamento);
+
     public Task<Orcamento?> ObterOrcamentoAsync(Guid ordemServicoId, CancellationToken cancelamento) =>
-        db.Orcamentos.AsNoTracking().Include(orcamento => orcamento.Linhas)
+        db.Orcamentos.Include(orcamento => orcamento.Linhas)
             .FirstOrDefaultAsync(orcamento => orcamento.OrdemServicoId == ordemServicoId, cancelamento);
+
+    public async Task<IReadOnlyCollection<ReservaItemOrdemServico>> ObterReservasAtivasAsync(
+        Guid ordemServicoId, CancellationToken cancelamento) =>
+        await db.ReservasItensOrdensServico.Where(reserva => reserva.OrdemServicoId == ordemServicoId &&
+            reserva.LiberadaEmUtc == null).ToArrayAsync(cancelamento);
+
+    public async Task<IReadOnlyDictionary<Guid, ItemEstoque>> ObterItensParaReservaAsync(
+        IReadOnlyCollection<Guid> ids, CancellationToken cancelamento) =>
+        await db.ItensEstoque.Where(item => ids.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, cancelamento);
 
     public void Adicionar(OrdemServico ordem) => db.OrdensServico.Add(ordem);
     public void Adicionar(ServicoSolicitado servico) => db.Set<ServicoSolicitado>().Add(servico);
     public void Adicionar(ItemNecessario item) => db.Set<ItemNecessario>().Add(item);
     public void Adicionar(MarcoOrdemServico marco) => db.Set<MarcoOrdemServico>().Add(marco);
     public void Adicionar(Orcamento orcamento) => db.Orcamentos.Add(orcamento);
+    public void Adicionar(EmissaoCodigoAcesso emissao) => db.Set<EmissaoCodigoAcesso>().Add(emissao);
 
     public async Task SalvarAsync(CancellationToken cancelamento)
     {

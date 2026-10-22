@@ -1,5 +1,7 @@
 namespace OficinaMecanicaFase1.Domain.Orcamentos;
 
+public enum DecisaoOrcamento { Pendente = 0, Aprovado = 1, Rejeitado = 2 }
+
 public sealed class Orcamento
 {
     private readonly List<LinhaOrcamento> _linhas = [];
@@ -11,7 +13,30 @@ public sealed class Orcamento
     public decimal TotalServicos { get; private set; }
     public decimal TotalItens { get; private set; }
     public decimal Total { get; private set; }
+    public DecisaoOrcamento Decisao { get; private set; }
+    public DateTimeOffset? DecididoEmUtc { get; private set; }
+    public string? MotivoRejeicao { get; private set; }
+    public byte[] Versao { get; private set; } = [];
     public IReadOnlyCollection<LinhaOrcamento> Linhas => _linhas;
+
+    public void Aprovar(DateTimeOffset agora)
+    {
+        if (Decisao != DecisaoOrcamento.Pendente)
+            throw new InvalidOperationException("O orçamento já recebeu uma decisão.");
+        Decisao = DecisaoOrcamento.Aprovado;
+        DecididoEmUtc = agora.ToUniversalTime();
+    }
+
+    public void Rejeitar(string motivo, DateTimeOffset agora)
+    {
+        if (Decisao != DecisaoOrcamento.Pendente)
+            throw new InvalidOperationException("O orçamento já recebeu uma decisão.");
+        if (string.IsNullOrWhiteSpace(motivo) || motivo.Trim().Length > 1000)
+            throw new ArgumentException("Informe o motivo da rejeição em até 1000 caracteres.", nameof(motivo));
+        Decisao = DecisaoOrcamento.Rejeitado;
+        MotivoRejeicao = motivo.Trim();
+        DecididoEmUtc = agora.ToUniversalTime();
+    }
 
     public static Orcamento Gerar(Guid ordemServicoId, DateTimeOffset agora,
         IEnumerable<(Guid Id, string Nome, decimal Preco)> servicos,
