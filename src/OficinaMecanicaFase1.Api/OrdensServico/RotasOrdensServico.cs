@@ -1,5 +1,6 @@
 using OficinaMecanicaFase1.Api.Contracts;
 using OficinaMecanicaFase1.Application.OrdensServico;
+using System.Security.Claims;
 
 namespace OficinaMecanicaFase1.Api.OrdensServico;
 
@@ -36,6 +37,32 @@ public static class RotasOrdensServico
             .RequireAuthorization("AtendentesEMecanicos")
             .Produces<OrdemServicoResponse>()
             .ProducesValidationProblem().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
+        ordens.MapPost("/{numero:long}/diagnostico/inicio", IniciarDiagnosticoAsync)
+            .WithName("IniciarDiagnostico")
+            .WithSummary("Mecânico inicia o diagnóstico de uma OS recebida.")
+            .RequireAuthorization("Mecanicos")
+            .Produces<OrdemServicoResponse>()
+            .ProducesValidationProblem().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
+        ordens.MapPost("/{numero:long}/diagnostico", RegistrarDiagnosticoAsync)
+            .WithName("RegistrarDiagnostico")
+            .WithSummary("Mecânico registra o diagnóstico iniciado.")
+            .RequireAuthorization("Mecanicos")
+            .Produces<OrdemServicoResponse>()
+            .ProducesValidationProblem().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
+        ordens.MapPost("/{numero:long}/orcamento", GerarOrcamentoAsync)
+            .WithName("GerarOrcamento")
+            .WithSummary("Sistema calcula serviços e itens após o diagnóstico e disponibiliza a proposta pela API.")
+            .RequireAuthorization("Mecanicos")
+            .Produces<OrcamentoResponse>()
+            .ProducesValidationProblem().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
+        ordens.MapGet("/{numero:long}/orcamento", ObterOrcamentoAsync)
+            .WithName("ObterOrcamento")
+            .Produces<OrcamentoResponse>()
+            .Produces(404).Produces(401).Produces(403);
 
         return app;
     }
@@ -77,6 +104,39 @@ public static class RotasOrdensServico
             numero, entrada.ItemEstoqueId, entrada.Quantidade, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Results.Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+    }
+
+    private static async Task<IResult> IniciarDiagnosticoAsync(long numero, ClaimsPrincipal usuario,
+        GerenciadorOrdensServico gerenciador, CancellationToken cancelamento)
+    {
+        if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var mecanicoId)) return Results.Forbid();
+        var resultado = await gerenciador.IniciarDiagnosticoAsync(numero, mecanicoId, cancelamento);
+        return resultado.Erro == ErroOrdemServico.Nenhum
+            ? Results.Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+    }
+
+    private static async Task<IResult> RegistrarDiagnosticoAsync(long numero, RegistrarDiagnosticoRequest entrada,
+        ClaimsPrincipal usuario, GerenciadorOrdensServico gerenciador, CancellationToken cancelamento)
+    {
+        if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var mecanicoId)) return Results.Forbid();
+        var resultado = await gerenciador.RegistrarDiagnosticoAsync(numero, mecanicoId, entrada.Descricao, cancelamento);
+        return resultado.Erro == ErroOrdemServico.Nenhum
+            ? Results.Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+    }
+
+    private static async Task<IResult> GerarOrcamentoAsync(long numero,
+        GerenciadorOrdensServico gerenciador, CancellationToken cancelamento)
+    {
+        var resultado = await gerenciador.GerarOrcamentoAsync(numero, cancelamento);
+        return resultado.Erro == ErroOrdemServico.Nenhum
+            ? Results.Ok(OrcamentoResponse.De(resultado.Valor!, numero)) : ResponderErro(resultado);
+    }
+
+    private static async Task<IResult> ObterOrcamentoAsync(long numero,
+        GerenciadorOrdensServico gerenciador, CancellationToken cancelamento)
+    {
+        var orcamento = await gerenciador.ObterOrcamentoAsync(numero, cancelamento);
+        return orcamento is null ? Results.NotFound() : Results.Ok(OrcamentoResponse.De(orcamento, numero));
     }
 
     private static IResult ResponderErro<T>(ResultadoOrdemServico<T> resultado) => resultado.Erro switch

@@ -70,6 +70,7 @@ builder.Services.AddAuthorizationBuilder()
         PapeisInternos.Administrador, PapeisInternos.Atendente))
     .AddPolicy("AtendentesEMecanicos", policy => policy.RequireAuthenticatedUser().RequireRole(
         PapeisInternos.Atendente, PapeisInternos.Mecanico))
+    .AddPolicy("Mecanicos", policy => policy.RequireAuthenticatedUser().RequireRole(PapeisInternos.Mecanico))
     .AddPolicy("Estoquistas", policy => policy.RequireAuthenticatedUser().RequireRole(PapeisInternos.Estoquista))
     .AddPolicy("Administradores", policy => policy.RequireAuthenticatedUser().RequireRole(PapeisInternos.Administrador));
 

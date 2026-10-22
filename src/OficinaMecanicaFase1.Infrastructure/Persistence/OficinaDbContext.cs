@@ -3,6 +3,7 @@ using OficinaMecanicaFase1.Domain.Cadastros;
 using OficinaMecanicaFase1.Domain.Catalogo;
 using OficinaMecanicaFase1.Domain.Estoque;
 using OficinaMecanicaFase1.Domain.OrdensServico;
+using OficinaMecanicaFase1.Domain.Orcamentos;
 
 namespace OficinaMecanicaFase1.Infrastructure.Persistence;
 
@@ -15,6 +16,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
     public DbSet<ItemEstoque> ItensEstoque => Set<ItemEstoque>();
     public DbSet<EntradaEstoque> EntradasEstoque => Set<EntradaEstoque>();
     public DbSet<OrdemServico> OrdensServico => Set<OrdemServico>();
+    public DbSet<Orcamento> Orcamentos => Set<Orcamento>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -110,6 +112,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.HasIndex(ordem => ordem.Numero).IsUnique();
             entity.Property(ordem => ordem.Status).HasConversion<int>().IsRequired();
             entity.Property(ordem => ordem.CriadaEmUtc).IsRequired();
+            entity.Property(ordem => ordem.DiagnosticoDescricao).HasMaxLength(4000);
             entity.HasIndex(ordem => new { ordem.Status, ordem.CriadaEmUtc });
             entity.HasOne<Cliente>().WithMany().HasForeignKey(ordem => ordem.ClienteId)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -158,6 +161,42 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.Property(marco => marco.Descricao).HasMaxLength(200).IsRequired();
             entity.Property(marco => marco.RegistradoEmUtc).IsRequired();
             entity.HasIndex(marco => new { marco.OrdemServicoId, marco.RegistradoEmUtc });
+        });
+
+        modelBuilder.Entity<Orcamento>(entity =>
+        {
+            entity.ToTable("Orcamentos", table =>
+            {
+                table.HasCheckConstraint("CK_Orcamentos_Valores", "[TotalServicos] >= 0 AND [TotalItens] >= 0 AND [Total] = [TotalServicos] + [TotalItens]");
+            });
+            entity.HasKey(orcamento => orcamento.Id);
+            entity.Property(orcamento => orcamento.GeradoEmUtc).IsRequired();
+            entity.Property(orcamento => orcamento.TotalServicos).HasPrecision(18, 2).IsRequired();
+            entity.Property(orcamento => orcamento.TotalItens).HasPrecision(18, 2).IsRequired();
+            entity.Property(orcamento => orcamento.Total).HasPrecision(18, 2).IsRequired();
+            entity.HasIndex(orcamento => orcamento.OrdemServicoId).IsUnique();
+            entity.HasOne<OrdemServico>().WithMany().HasForeignKey(orcamento => orcamento.OrdemServicoId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(orcamento => orcamento.Linhas).WithOne().HasForeignKey(linha => linha.OrcamentoId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(orcamento => orcamento.Linhas).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<LinhaOrcamento>(entity =>
+        {
+            entity.ToTable("LinhasOrcamento", table =>
+            {
+                table.HasCheckConstraint("CK_LinhasOrcamento_Tipo", "[Tipo] IN (1, 2)");
+                table.HasCheckConstraint("CK_LinhasOrcamento_Valores", "[Quantidade] > 0 AND [PrecoUnitario] >= 0 AND [ValorTotal] >= 0");
+            });
+            entity.HasKey(linha => linha.Id);
+            entity.Property(linha => linha.Tipo).HasConversion<int>().IsRequired();
+            entity.Property(linha => linha.Descricao).HasMaxLength(200).IsRequired();
+            entity.Property(linha => linha.UnidadeMedida).HasMaxLength(20).IsRequired();
+            entity.Property(linha => linha.Quantidade).HasPrecision(18, 3).IsRequired();
+            entity.Property(linha => linha.PrecoUnitario).HasPrecision(18, 2).IsRequired();
+            entity.Property(linha => linha.ValorTotal).HasPrecision(18, 2).IsRequired();
+            entity.HasIndex(linha => new { linha.OrcamentoId, linha.Tipo, linha.ReferenciaId }).IsUnique();
         });
     }
 }

@@ -55,7 +55,7 @@ No primeiro início, a API aplica a migration da Identity e cria os papéis `Adm
 | --- | --- |
 | Administrador | Cria contas internas, administra clientes e veículos e mantém serviços, peças e insumos do catálogo. |
 | Atendente | Identifica clientes e veículos, abre ordens de serviço e registra a entrega nos fluxos correspondentes. |
-| Mecânico | Diagnóstico, execução e registro de consumo nas rotas futuras. |
+| Mecânico | Inicia e registra o diagnóstico, solicita a geração do orçamento e, nos fluxos seguintes, executa a OS e registra o consumo. |
 | Estoquista | Registra entradas de estoque; avisos de reserva recusada nos fluxos seguintes. |
 
 `POST /api/interno/autenticacao` recebe `email` e `senha` e devolve um JWT padrão válido por 15 minutos. Cinco tentativas de senha incorreta bloqueiam a conta por 15 minutos. `GET /api/interno/identidade` exige um dos quatro papéis internos; `POST /api/interno/usuarios` exige `Administrador` e permite criar contas com um dos quatro papéis. O documento OpenAPI indica Bearer nas rotas protegidas, e o botão **Authorize** do Swagger aceita o token devolvido pelo login. Rotas `/api/saude` e `/api/saude/banco` continuam públicas. O cliente da oficina não é uma conta interna; a consulta de OS e decisões sobre orçamento serão desenvolvidas nos fluxos próprios.
@@ -164,8 +164,14 @@ Exemplo de corpo:
 | GET | `/api/ordens-servico/{numero}` | Consultar serviços, itens, status e marcos da OS. |
 | POST | `/api/ordens-servico/{numero}/servicos` | Acrescentar serviço ativo antes da aprovação do orçamento; exige Atendente ou Mecânico. Corpo: `{"servicoCatalogoId":"GUID"}`. |
 | POST | `/api/ordens-servico/{numero}/itens` | Acrescentar item ativo e consultar sua disponibilidade; exige Atendente ou Mecânico. Corpo: `{"itemEstoqueId":"GUID","quantidade":1}`. |
+| POST | `/api/ordens-servico/{numero}/diagnostico/inicio` | Mecânico inicia o diagnóstico e muda a OS para `EmDiagnostico`. |
+| POST | `/api/ordens-servico/{numero}/diagnostico` | Mecânico registra a avaliação. Corpo: `{"descricao":"Pastilhas desgastadas"}`. |
+| POST | `/api/ordens-servico/{numero}/orcamento` | Após o diagnóstico, o sistema calcula a proposta e muda a OS para `AguardandoAprovacao`; exige Mecânico. |
+| GET | `/api/ordens-servico/{numero}/orcamento` | Qualquer papel interno consulta a proposta, com serviços, itens, quantidades e totais. |
 
 Ao incluir peça ou insumo, a OS registra o saldo disponível consultado naquele momento. Isso não reserva nem baixa estoque; reserva e consumo pertencem aos fluxos posteriores de aprovação e execução. Serviço ou item inativo, veículo de outro cliente, serviço ausente, repetição ou quantidade inválida retorna `400`; número de OS inexistente retorna `404`. A migration `CriarOrdensServico` cria a OS, os serviços e itens associados e os marcos. Os seis status oficiais estão definidos no domínio; a abertura usa somente `Recebida`.
+
+O orçamento só pode ser gerado depois de o Mecânico iniciar e registrar o diagnóstico. O sistema usa os preços atuais dos serviços e itens associados à OS e grava uma cópia dos nomes, unidades, preços e valores calculados; mudanças posteriores no catálogo não alteram a proposta. Cada serviço tem quantidade 1, e itens usam a quantidade necessária registrada na OS. O valor dos itens é arredondado para duas casas decimais. A geração salva orçamento, linhas, status e marco na mesma transação; uma OS tem no máximo um orçamento. A proposta fica disponível pela API, sem envio de e-mail. Esta rota de consulta é interna; o acesso do cliente à própria proposta integra o fluxo de aprovação posterior. Gerar antes do diagnóstico, repetir o diagnóstico ou gerar novamente retorna `400`. A migration `CriarDiagnosticosEOrcamentos` cria as novas colunas e tabelas.
 
 O SQL Server é apropriado aqui porque o domínio tem relacionamentos entre cliente, veículo, OS, orçamento e estoque; chaves, restrições e transações ajudam a preservar consistência, especialmente em futuras reservas e baixas. A equipe também já conhece esse banco. EF Core fornece mapeamento e migrations versionadas, e a imagem Developer permite desenvolvimento local reproduzível.
 

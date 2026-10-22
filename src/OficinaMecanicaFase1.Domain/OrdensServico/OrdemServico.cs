@@ -13,6 +13,11 @@ public sealed class OrdemServico
     public Guid VeiculoId { get; private set; }
     public StatusOrdemServico Status { get; private set; }
     public DateTimeOffset CriadaEmUtc { get; private set; }
+    public DateTimeOffset? DiagnosticoIniciadoEmUtc { get; private set; }
+    public Guid? DiagnosticoIniciadoPorId { get; private set; }
+    public DateTimeOffset? DiagnosticoRegistradoEmUtc { get; private set; }
+    public Guid? DiagnosticoRegistradoPorId { get; private set; }
+    public string? DiagnosticoDescricao { get; private set; }
     public IReadOnlyCollection<ServicoSolicitado> ServicosSolicitados => _servicosSolicitados;
     public IReadOnlyCollection<ItemNecessario> ItensNecessarios => _itensNecessarios;
     public IReadOnlyCollection<MarcoOrdemServico> Marcos => _marcos;
@@ -68,5 +73,43 @@ public sealed class OrdemServico
         var item = new ItemNecessario(Id, itemEstoqueId, quantidade, saldoDisponivel);
         _itensNecessarios.Add(item);
         return item;
+    }
+
+    public MarcoOrdemServico IniciarDiagnostico(Guid mecanicoId, DateTimeOffset agora)
+    {
+        if (Status != StatusOrdemServico.Recebida)
+            throw new InvalidOperationException("O diagnóstico só pode ser iniciado em uma OS recebida.");
+        if (mecanicoId == Guid.Empty) throw new ArgumentException("Informe o mecânico.", nameof(mecanicoId));
+        Status = StatusOrdemServico.EmDiagnostico;
+        DiagnosticoIniciadoPorId = mecanicoId;
+        DiagnosticoIniciadoEmUtc = agora.ToUniversalTime();
+        var marco = new MarcoOrdemServico(Id, Status, "Diagnóstico iniciado", agora);
+        _marcos.Add(marco);
+        return marco;
+    }
+
+    public MarcoOrdemServico RegistrarDiagnostico(Guid mecanicoId, string descricao, DateTimeOffset agora)
+    {
+        if (Status != StatusOrdemServico.EmDiagnostico || DiagnosticoIniciadoEmUtc is null || DiagnosticoRegistradoEmUtc is not null)
+            throw new InvalidOperationException("Inicie o diagnóstico antes de registrá-lo; um diagnóstico já registrado não pode ser repetido.");
+        if (mecanicoId == Guid.Empty) throw new ArgumentException("Informe o mecânico.", nameof(mecanicoId));
+        if (string.IsNullOrWhiteSpace(descricao) || descricao.Trim().Length > 4000)
+            throw new ArgumentException("Descreva o diagnóstico em até 4000 caracteres.", nameof(descricao));
+        DiagnosticoDescricao = descricao.Trim();
+        DiagnosticoRegistradoPorId = mecanicoId;
+        DiagnosticoRegistradoEmUtc = agora.ToUniversalTime();
+        var marco = new MarcoOrdemServico(Id, Status, "Diagnóstico registrado", agora);
+        _marcos.Add(marco);
+        return marco;
+    }
+
+    public MarcoOrdemServico DisponibilizarOrcamento(DateTimeOffset agora)
+    {
+        if (Status != StatusOrdemServico.EmDiagnostico || DiagnosticoRegistradoEmUtc is null)
+            throw new InvalidOperationException("Registre o diagnóstico antes de gerar o orçamento.");
+        Status = StatusOrdemServico.AguardandoAprovacao;
+        var marco = new MarcoOrdemServico(Id, Status, "Orçamento disponibilizado", agora);
+        _marcos.Add(marco);
+        return marco;
     }
 }

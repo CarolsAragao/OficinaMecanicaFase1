@@ -14,6 +14,7 @@ using OficinaMecanicaFase1.Domain.Cadastros;
 using OficinaMecanicaFase1.Domain.Catalogo;
 using OficinaMecanicaFase1.Domain.Estoque;
 using OficinaMecanicaFase1.Domain.OrdensServico;
+using OficinaMecanicaFase1.Domain.Orcamentos;
 using OficinaMecanicaFase1.Infrastructure.Persistence;
 using Testcontainers.MsSql;
 using Xunit;
@@ -33,6 +34,104 @@ public sealed class OrdensServicoTests
         Assert.Equal("OS recebida", ordem.Marcos.Single().Descricao);
         Assert.Equal(TimeSpan.Zero, ordem.CriadaEmUtc.Offset);
         Assert.Throws<ArgumentException>(() => OrdemServico.Criar(Guid.NewGuid(), Guid.NewGuid(), [], [], DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public void DiagnosticoPrecedeOrcamentoEValoresSaoCongelados()
+    {
+        var ordem = OrdemServico.Criar(Guid.NewGuid(), Guid.NewGuid(), [Guid.NewGuid()], [], DateTimeOffset.UtcNow);
+        Assert.Throws<InvalidOperationException>(() => ordem.DisponibilizarOrcamento(DateTimeOffset.UtcNow));
+        Assert.Throws<InvalidOperationException>(() => ordem.RegistrarDiagnostico(Guid.NewGuid(), "Ruído", DateTimeOffset.UtcNow));
+        var mecanico = Guid.NewGuid();
+        ordem.IniciarDiagnostico(mecanico, DateTimeOffset.UtcNow);
+        Assert.Equal(StatusOrdemServico.EmDiagnostico, ordem.Status);
+        ordem.RegistrarDiagnostico(mecanico, "Pastilhas desgastadas", DateTimeOffset.UtcNow);
+        Assert.Throws<InvalidOperationException>(() => ordem.RegistrarDiagnostico(mecanico, "Outro", DateTimeOffset.UtcNow));
+        var orcamento = Orcamento.Gerar(ordem.Id, DateTimeOffset.UtcNow,
+            [(Guid.NewGuid(), "Freio", 100m)], [(Guid.NewGuid(), "Pastilha", "un", 2m, 12.50m)]);
+        ordem.DisponibilizarOrcamento(DateTimeOffset.UtcNow);
+        Assert.Equal(StatusOrdemServico.AguardandoAprovacao, ordem.Status);
+        Assert.Equal(100m, orcamento.TotalServicos);
+        Assert.Equal(25m, orcamento.TotalItens);
+        Assert.Equal(125m, orcamento.Total);
+        Assert.Throws<InvalidOperationException>(() => ordem.AdicionarServicoSolicitado(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task ApiExigeMecanicoEPublicaOrcamentoAposDiagnostico()
+    {
+        await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();
+        await sqlServer.StartAsync();
+        var conexao = new SqlConnectionStringBuilder(sqlServer.GetConnectionString())
+        {
+            InitialCatalog = $"OficinaOrcamentos_{Guid.NewGuid():N}"
+        };
+        var configuracoes = new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Oficina"] = conexao.ConnectionString,
+            ["Jwt:Issuer"] = "OficinaMecanicaFase1",
+            ["Jwt:Audience"] = "OficinaMecanicaFase1.Interno",
+            ["Jwt:SigningKey"] = Convert.ToBase64String(Encoding.UTF8.GetBytes("UmaChaveFixaDeTesteComMaisDeTrintaEDoisBytes!")),
+            ["Bootstrap:AdminEmail"] = "admin@orcamentos.test",
+            ["Bootstrap:AdminPassword"] = "AdminDeTeste123!"
+        };
+        using var fabrica = new OficinaApiFactory(configuracoes);
+        using var cliente = fabrica.CreateClient();
+        await AutenticarAsync(cliente, "admin@orcamentos.test", "AdminDeTeste123!");
+        var pessoa = await CriarClienteAsync(cliente, "Ana", "529.982.247-25");
+        var veiculo = await CriarVeiculoAsync(cliente, pessoa.Id, "ABC1234");
+        var servico = await CriarServicoAsync(cliente, "Revisão", 120m);
+        var item = await CriarItemAsync(cliente, "Óleo", "Insumo", "L");
+        var criado = await cliente.PostAsJsonAsync("/api/ordens-servico", new
+        {
+            clienteId = pessoa.Id, veiculoId = veiculo.Id, servicosIds = new[] { servico.Id },
+            itensNecessarios = new[] { new { itemEstoqueId = item.Id, quantidade = 0.5m } }
+        });
+        Assert.Equal(HttpStatusCode.Created, criado.StatusCode);
+        var ordem = (await criado.Content.ReadFromJsonAsync<OrdemServicoResponse>())!;
+        var rota = $"/api/ordens-servico/{ordem.Numero}";
+        Assert.Equal(HttpStatusCode.Forbidden, (await cliente.PostAsync(rota + "/orcamento", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await cliente.PostAsync(rota + "/diagnostico/inicio", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await cliente.GetAsync(rota + "/orcamento")).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await cliente.PostAsJsonAsync("/api/interno/usuarios", new
+        {
+            Email = "mecanico@orcamentos.test", Senha = "MecanicoDeTeste123!", Papel = "Mecânico"
+        })).StatusCode);
+        await AutenticarAsync(cliente, "mecanico@orcamentos.test", "MecanicoDeTeste123!");
+        Assert.Equal(HttpStatusCode.BadRequest, (await cliente.PostAsync(rota + "/orcamento", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await cliente.PostAsync(rota + "/diagnostico/inicio", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await cliente.PostAsync(rota + "/orcamento", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await cliente.PostAsJsonAsync(rota + "/diagnostico",
+            new RegistrarDiagnosticoRequest("Troca de óleo necessária"))).StatusCode);
+        var gerado = await cliente.PostAsync(rota + "/orcamento", null);
+        Assert.True(gerado.StatusCode == HttpStatusCode.OK,
+            $"{gerado.StatusCode}: {await gerado.Content.ReadAsStringAsync()}");
+        var proposta = (await gerado.Content.ReadFromJsonAsync<OrcamentoResponse>())!;
+        Assert.Equal(120m, proposta.TotalServicos);
+        Assert.Equal(10m, proposta.TotalItens);
+        Assert.Equal(130m, proposta.Total);
+        Assert.Equal(2, proposta.Linhas.Length);
+        Assert.Equal(HttpStatusCode.BadRequest, (await cliente.PostAsync(rota + "/orcamento", null)).StatusCode);
+        var consultada = (await cliente.GetFromJsonAsync<OrcamentoResponse>(rota + "/orcamento"))!;
+        Assert.Equal(proposta.Id, consultada.Id);
+        Assert.Equal(proposta.Total, consultada.Total);
+        var osAtualizada = (await cliente.GetFromJsonAsync<OrdemServicoResponse>(rota))!;
+        Assert.Equal("AguardandoAprovacao", osAtualizada.Status);
+        Assert.Equal("Troca de óleo necessária", osAtualizada.Diagnostico.Descricao);
+        Assert.Equal(4, osAtualizada.Marcos.Length);
+        await AutenticarAsync(cliente, "admin@orcamentos.test", "AdminDeTeste123!");
+        Assert.Equal(HttpStatusCode.OK, (await cliente.PutAsJsonAsync($"/api/servicos/{servico.Id}",
+            new ServicoCatalogoRequest("Revisão", null, 300m))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await cliente.PutAsJsonAsync($"/api/itens-estoque/{item.Id}",
+            new AtualizarItemEstoqueRequest("Óleo", null, 50m))).StatusCode);
+        var propostaHistorica = (await cliente.GetFromJsonAsync<OrcamentoResponse>(rota + "/orcamento"))!;
+        Assert.Equal(130m, propostaHistorica.Total);
+        Assert.Contains(propostaHistorica.Linhas, linha => linha.Tipo == "Servico" && linha.PrecoUnitario == 120m);
+        Assert.Contains(propostaHistorica.Linhas, linha => linha.Tipo == "Item" && linha.PrecoUnitario == 20m);
+        using var escopo = fabrica.Services.CreateScope();
+        var db = escopo.ServiceProvider.GetRequiredService<OficinaDbContext>();
+        Assert.False(db.Database.HasPendingModelChanges());
+        Assert.Equal(0m, await db.ItensEstoque.Where(i => i.Id == item.Id).Select(i => i.SaldoReservado).SingleAsync());
     }
 
     [Fact]

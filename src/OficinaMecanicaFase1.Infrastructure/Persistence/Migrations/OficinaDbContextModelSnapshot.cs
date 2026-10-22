@@ -204,6 +204,91 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Orcamentos.LinhaOrcamento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrcamentoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("PrecoUnitario")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Quantidade")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<Guid>("ReferenciaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UnidadeMedida")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("ValorTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrcamentoId", "Tipo", "ReferenciaId")
+                        .IsUnique();
+
+                    b.ToTable("LinhasOrcamento", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_LinhasOrcamento_Tipo", "[Tipo] IN (1, 2)");
+
+                            t.HasCheckConstraint("CK_LinhasOrcamento_Valores", "[Quantidade] > 0 AND [PrecoUnitario] >= 0 AND [ValorTotal] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Orcamentos.Orcamento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("GeradoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("OrdemServicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalItens")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalServicos")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrdemServicoId")
+                        .IsUnique();
+
+                    b.ToTable("Orcamentos", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Orcamentos_Valores", "[TotalServicos] >= 0 AND [TotalItens] >= 0 AND [Total] = [TotalServicos] + [TotalItens]");
+                        });
+                });
+
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.ItemNecessario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -277,6 +362,22 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("CriadaEmUtc")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DiagnosticoDescricao")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTimeOffset?>("DiagnosticoIniciadoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("DiagnosticoIniciadoPorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("DiagnosticoRegistradoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("DiagnosticoRegistradoPorId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<long>("Numero")
                         .ValueGeneratedOnAdd()
@@ -368,6 +469,24 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Orcamentos.LinhaOrcamento", b =>
+                {
+                    b.HasOne("OficinaMecanicaFase1.Domain.Orcamentos.Orcamento", null)
+                        .WithMany("Linhas")
+                        .HasForeignKey("OrcamentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Orcamentos.Orcamento", b =>
+                {
+                    b.HasOne("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", null)
+                        .WithMany()
+                        .HasForeignKey("OrdemServicoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.ItemNecessario", b =>
                 {
                     b.HasOne("OficinaMecanicaFase1.Domain.Estoque.ItemEstoque", null)
@@ -420,6 +539,11 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ServicoCatalogoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Orcamentos.Orcamento", b =>
+                {
+                    b.Navigation("Linhas");
                 });
 
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", b =>

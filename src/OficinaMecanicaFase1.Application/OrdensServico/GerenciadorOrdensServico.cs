@@ -1,5 +1,6 @@
 using OficinaMecanicaFase1.Application.Cadastros;
 using OficinaMecanicaFase1.Domain.OrdensServico;
+using OficinaMecanicaFase1.Domain.Orcamentos;
 
 namespace OficinaMecanicaFase1.Application.OrdensServico;
 
@@ -81,6 +82,68 @@ public sealed class GerenciadorOrdensServico(
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
         return await SalvarAsync(ordem, cancelamento);
+    }
+
+    public async Task<ResultadoOrdemServico<OrdemServico>> IniciarDiagnosticoAsync(
+        long numero, Guid mecanicoId, CancellationToken cancelamento)
+    {
+        var ordem = await repositorio.ObterAsync(numero, cancelamento);
+        if (ordem is null) return NaoEncontrado<OrdemServico>();
+        try { repositorio.Adicionar(ordem.IniciarDiagnostico(mecanicoId, tempo.GetUtcNow())); }
+        catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
+        catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
+        return await SalvarAsync(ordem, cancelamento);
+    }
+
+    public async Task<ResultadoOrdemServico<OrdemServico>> RegistrarDiagnosticoAsync(
+        long numero, Guid mecanicoId, string descricao, CancellationToken cancelamento)
+    {
+        var ordem = await repositorio.ObterAsync(numero, cancelamento);
+        if (ordem is null) return NaoEncontrado<OrdemServico>();
+        try { repositorio.Adicionar(ordem.RegistrarDiagnostico(mecanicoId, descricao, tempo.GetUtcNow())); }
+        catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
+        catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
+        return await SalvarAsync(ordem, cancelamento);
+    }
+
+    public async Task<ResultadoOrdemServico<Orcamento>> GerarOrcamentoAsync(
+        long numero, CancellationToken cancelamento)
+    {
+        var ordem = await repositorio.ObterAsync(numero, cancelamento);
+        if (ordem is null) return NaoEncontrado<Orcamento>();
+        if (ordem.Status != StatusOrdemServico.EmDiagnostico || ordem.DiagnosticoRegistradoEmUtc is null)
+            return Invalido<Orcamento>("Registre o diagnóstico antes de gerar o orçamento.", "status");
+        if (await repositorio.ObterOrcamentoAsync(ordem.Id, cancelamento) is not null)
+            return Invalido<Orcamento>("Esta OS já possui orçamento.", "status");
+
+        var servicosIds = ordem.ServicosSolicitados.Select(servico => servico.ServicoCatalogoId).ToArray();
+        var itensIds = ordem.ItensNecessarios.Select(item => item.ItemEstoqueId).ToArray();
+        var servicos = await repositorio.ObterServicosAsync(servicosIds, cancelamento);
+        var itens = await repositorio.ObterItensAsync(itensIds, cancelamento);
+        if (servicos.Count != servicosIds.Length || itens.Count != itensIds.Length)
+            return Invalido<Orcamento>("Um serviço ou item da OS não está mais disponível.", "ordemServico");
+
+        Orcamento orcamento;
+        try
+        {
+            var agora = tempo.GetUtcNow();
+            orcamento = Orcamento.Gerar(ordem.Id, agora,
+                servicosIds.Select(id => (id, servicos[id].Nome, servicos[id].PrecoBase)),
+                ordem.ItensNecessarios.Select(item => (item.ItemEstoqueId, itens[item.ItemEstoqueId].Nome,
+                    itens[item.ItemEstoqueId].UnidadeMedida, item.Quantidade, itens[item.ItemEstoqueId].PrecoUnitario)));
+            repositorio.Adicionar(ordem.DisponibilizarOrcamento(agora));
+        }
+        catch (ArgumentException erro) { return Invalido<Orcamento>(erro.Message, erro.ParamName); }
+        catch (OverflowException) { return Invalido<Orcamento>("O total do orçamento excede o limite permitido.", "valor"); }
+        catch (InvalidOperationException erro) { return Invalido<Orcamento>(erro.Message, "status"); }
+        repositorio.Adicionar(orcamento);
+        return await SalvarAsync(orcamento, cancelamento);
+    }
+
+    public async Task<Orcamento?> ObterOrcamentoAsync(long numero, CancellationToken cancelamento)
+    {
+        var ordem = await repositorio.ObterAsync(numero, cancelamento);
+        return ordem is null ? null : await repositorio.ObterOrcamentoAsync(ordem.Id, cancelamento);
     }
 
     private async Task<ResultadoOrdemServico<T>> SalvarAsync<T>(T valor, CancellationToken cancelamento)
