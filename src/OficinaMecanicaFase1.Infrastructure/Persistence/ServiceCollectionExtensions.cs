@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OficinaMecanicaFase1.Application.Cadastros;
 using OficinaMecanicaFase1.Application.Catalogo;
+using OficinaMecanicaFase1.Application.OrdensServico;
 using OficinaMecanicaFase1.Infrastructure.Identity;
 
 namespace OficinaMecanicaFase1.Infrastructure.Persistence;
@@ -23,6 +24,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<GerenciadorCadastros>();
         services.AddScoped<IRepositorioCatalogo, RepositorioCatalogo>();
         services.AddScoped<GerenciadorCatalogo>();
+        services.AddScoped<IRepositorioOrdensServico, RepositorioOrdensServico>();
+        services.AddScoped<GerenciadorOrdensServico>();
 
         services.AddDbContext<IdentidadeDbContext>(options =>
             options.UseSqlServer(connectionString, sql => sql

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using OficinaMecanicaFase1.Domain.Cadastros;
 using OficinaMecanicaFase1.Domain.Catalogo;
 using OficinaMecanicaFase1.Domain.Estoque;
+using OficinaMecanicaFase1.Domain.OrdensServico;
 
 namespace OficinaMecanicaFase1.Infrastructure.Persistence;
 
@@ -13,6 +14,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
     public DbSet<ServicoCatalogo> ServicosCatalogo => Set<ServicoCatalogo>();
     public DbSet<ItemEstoque> ItensEstoque => Set<ItemEstoque>();
     public DbSet<EntradaEstoque> EntradasEstoque => Set<EntradaEstoque>();
+    public DbSet<OrdemServico> OrdensServico => Set<OrdemServico>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -94,6 +96,68 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.HasIndex(entrada => new { entrada.ItemEstoqueId, entrada.RegistradaEmUtc });
             entity.HasOne<ItemEstoque>().WithMany().HasForeignKey(entrada => entrada.ItemEstoqueId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OrdemServico>(entity =>
+        {
+            entity.ToTable("OrdensServico", table =>
+            {
+                table.HasCheckConstraint("CK_OrdensServico_Numero", "[Numero] > 0");
+                table.HasCheckConstraint("CK_OrdensServico_Status", "[Status] BETWEEN 1 AND 6");
+            });
+            entity.HasKey(ordem => ordem.Id);
+            entity.Property(ordem => ordem.Numero).UseIdentityColumn();
+            entity.HasIndex(ordem => ordem.Numero).IsUnique();
+            entity.Property(ordem => ordem.Status).HasConversion<int>().IsRequired();
+            entity.Property(ordem => ordem.CriadaEmUtc).IsRequired();
+            entity.HasIndex(ordem => new { ordem.Status, ordem.CriadaEmUtc });
+            entity.HasOne<Cliente>().WithMany().HasForeignKey(ordem => ordem.ClienteId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Veiculo>().WithMany().HasForeignKey(ordem => ordem.VeiculoId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(ordem => ordem.ServicosSolicitados).WithOne().HasForeignKey(servico => servico.OrdemServicoId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(ordem => ordem.ServicosSolicitados).UsePropertyAccessMode(PropertyAccessMode.Field);
+            entity.HasMany(ordem => ordem.ItensNecessarios).WithOne().HasForeignKey(item => item.OrdemServicoId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(ordem => ordem.ItensNecessarios).UsePropertyAccessMode(PropertyAccessMode.Field);
+            entity.HasMany(ordem => ordem.Marcos).WithOne().HasForeignKey(marco => marco.OrdemServicoId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.Navigation(ordem => ordem.Marcos).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<ServicoSolicitado>(entity =>
+        {
+            entity.ToTable("ServicosSolicitadosOS");
+            entity.HasKey(servico => servico.Id);
+            entity.HasIndex(servico => new { servico.OrdemServicoId, servico.ServicoCatalogoId }).IsUnique();
+            entity.HasOne<ServicoCatalogo>().WithMany().HasForeignKey(servico => servico.ServicoCatalogoId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ItemNecessario>(entity =>
+        {
+            entity.ToTable("ItensNecessariosOS", table =>
+            {
+                table.HasCheckConstraint("CK_ItensNecessariosOS_Quantidade", "[Quantidade] > 0");
+                table.HasCheckConstraint("CK_ItensNecessariosOS_Disponibilidade", "[SaldoDisponivelConsultado] >= 0");
+            });
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Quantidade).HasPrecision(18, 3).IsRequired();
+            entity.Property(item => item.SaldoDisponivelConsultado).HasPrecision(18, 3).IsRequired();
+            entity.HasIndex(item => new { item.OrdemServicoId, item.ItemEstoqueId }).IsUnique();
+            entity.HasOne<ItemEstoque>().WithMany().HasForeignKey(item => item.ItemEstoqueId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MarcoOrdemServico>(entity =>
+        {
+            entity.ToTable("MarcosOrdemServico");
+            entity.HasKey(marco => marco.Id);
+            entity.Property(marco => marco.Status).HasConversion<int>().IsRequired();
+            entity.Property(marco => marco.Descricao).HasMaxLength(200).IsRequired();
+            entity.Property(marco => marco.RegistradoEmUtc).IsRequired();
+            entity.HasIndex(marco => new { marco.OrdemServicoId, marco.RegistradoEmUtc });
         });
     }
 }

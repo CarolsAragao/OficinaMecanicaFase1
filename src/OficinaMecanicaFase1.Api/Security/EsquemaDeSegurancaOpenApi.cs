@@ -23,7 +23,8 @@ public static class EsquemaDeSegurancaOpenApi
                   RotaDoGrupo(rota, "/api/clientes") ||
                   RotaDoGrupo(rota, "/api/veiculos") ||
                   RotaDoGrupo(rota, "/api/servicos") ||
-                  RotaDoGrupo(rota, "/api/itens-estoque")))
+                  RotaDoGrupo(rota, "/api/itens-estoque") ||
+                  RotaDoGrupo(rota, "/api/ordens-servico")))
             {
                 continue;
             }

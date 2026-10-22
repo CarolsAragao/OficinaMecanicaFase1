@@ -54,7 +54,7 @@ No primeiro início, a API aplica a migration da Identity e cria os papéis `Adm
 | Papel | Responsabilidade inicial |
 | --- | --- |
 | Administrador | Cria contas internas, administra clientes e veículos e mantém serviços, peças e insumos do catálogo. |
-| Atendente | Identifica e cadastra clientes e veículos; abertura e entrega de OS nos fluxos seguintes. |
+| Atendente | Identifica clientes e veículos, abre ordens de serviço e registra a entrega nos fluxos correspondentes. |
 | Mecânico | Diagnóstico, execução e registro de consumo nas rotas futuras. |
 | Estoquista | Registra entradas de estoque; avisos de reserva recusada nos fluxos seguintes. |
 
@@ -139,6 +139,33 @@ As leituras abaixo exigem JWT de qualquer papel interno. `Administrador` cria, a
 Exemplos de corpo JSON: serviço `{"nome":"Alinhamento","descricao":"Eixos dianteiros","precoBase":120.00}`; peça `{"nome":"Filtro de óleo","tipo":"Peca","unidadeMedida":"un","precoUnitario":20.00}`; insumo `{"nome":"Óleo","tipo":"Insumo","unidadeMedida":"L","precoUnitario":15.50}`; entrada `{"quantidade":1.250}`. Os cadastros começam com saldo físico e reservado em zero. O preço aceita duas casas decimais; a quantidade aceita até três. Para peças, a quantidade deve ser inteira e a unidade deve ser `un`. Insumos aceitam quantidades fracionárias. Tipo e unidade de medida são definidos no cadastro inicial e não mudam na atualização.
 
 O saldo disponível é o físico menos o reservado. Nesta versão, uma entrada aumenta somente o saldo físico e grava um registro com instante UTC e usuário responsável. Cada atualização de saldo usa controle de concorrência; se outra operação alterou o item, a API responde `409` para que o saldo seja consultado antes de tentar novamente. Valor inválido retorna `400`, cadastro inexistente `404`, ausência de JWT `401` e papel sem permissão `403`. A migration `CriarCatalogoEEntradasEstoque` cria as tabelas e restrições ao iniciar a API.
+
+## Ordens de serviço
+
+`POST /api/ordens-servico` abre uma ordem com cliente, veículo e ao menos um serviço ativo do catálogo. Só aceita veículo associado ao cliente informado. Os itens necessários são opcionais na abertura; a API aceita peça em quantidade inteira e insumo fracionário com até três casas decimais. Um número sequencial é gerado pelo SQL Server, a OS começa em `Recebida` e grava o marco `OS recebida` com instante UTC. A rota exige JWT de Administrador ou Atendente.
+
+Exemplo de corpo:
+
+```json
+{
+  "clienteId": "GUID-DO-CLIENTE",
+  "veiculoId": "GUID-DO-VEICULO-DO-CLIENTE",
+  "servicosIds": ["GUID-DO-SERVICO-ATIVO"],
+  "itensNecessarios": [
+    { "itemEstoqueId": "GUID-DA-PECA-ATIVA", "quantidade": 1 },
+    { "itemEstoqueId": "GUID-DO-INSUMO-ATIVO", "quantidade": 0.5 }
+  ]
+}
+```
+
+| Método | Rota | Uso |
+| --- | --- | --- |
+| POST | `/api/ordens-servico` | Abrir OS como `Recebida`; exige Administrador ou Atendente. |
+| GET | `/api/ordens-servico/{numero}` | Consultar serviços, itens, status e marcos da OS. |
+| POST | `/api/ordens-servico/{numero}/servicos` | Acrescentar serviço ativo antes da aprovação do orçamento; exige Atendente ou Mecânico. Corpo: `{"servicoCatalogoId":"GUID"}`. |
+| POST | `/api/ordens-servico/{numero}/itens` | Acrescentar item ativo e consultar sua disponibilidade; exige Atendente ou Mecânico. Corpo: `{"itemEstoqueId":"GUID","quantidade":1}`. |
+
+Ao incluir peça ou insumo, a OS registra o saldo disponível consultado naquele momento. Isso não reserva nem baixa estoque; reserva e consumo pertencem aos fluxos posteriores de aprovação e execução. Serviço ou item inativo, veículo de outro cliente, serviço ausente, repetição ou quantidade inválida retorna `400`; número de OS inexistente retorna `404`. A migration `CriarOrdensServico` cria a OS, os serviços e itens associados e os marcos. Os seis status oficiais estão definidos no domínio; a abertura usa somente `Recebida`.
 
 O SQL Server é apropriado aqui porque o domínio tem relacionamentos entre cliente, veículo, OS, orçamento e estoque; chaves, restrições e transações ajudam a preservar consistência, especialmente em futuras reservas e baixas. A equipe também já conhece esse banco. EF Core fornece mapeamento e migrations versionadas, e a imagem Developer permite desenvolvimento local reproduzível.
 
