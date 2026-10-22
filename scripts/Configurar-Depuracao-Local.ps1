@@ -30,6 +30,9 @@ if (Test-Path -LiteralPath $arquivoEnv) {
 if ([string]::IsNullOrWhiteSpace($senha) -or $senha -match '[\r\n;"'']') {
     throw 'A senha existente no .env não pode ficar vazia nem conter aspas, ponto e vírgula ou quebras de linha.'
 }
+if ($senha -eq 'SenhaForte123!') {
+    throw 'Substitua a senha de exemplo por uma senha própria no arquivo .env.'
+}
 
 $conexao = "Server=localhost,1433;Database=OficinaMecanica;User Id=sa;Password=$senha;Encrypt=True;TrustServerCertificate=True"
 & dotnet user-secrets set 'ConnectionStrings:Oficina' $conexao --project $projetoApi

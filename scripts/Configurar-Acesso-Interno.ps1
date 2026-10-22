@@ -20,8 +20,12 @@ foreach ($linha in ($conteudo -split "`r?`n")) {
     }
 }
 
-if (-not $valores.ContainsKey('MSSQL_SA_PASSWORD')) {
-    throw 'O arquivo .env não contém MSSQL_SA_PASSWORD.'
+if (-not $valores.ContainsKey('MSSQL_SA_PASSWORD') -or
+    [string]::IsNullOrWhiteSpace($valores['MSSQL_SA_PASSWORD'])) {
+    throw 'Defina uma senha forte e própria em MSSQL_SA_PASSWORD no arquivo .env.'
+}
+if ($valores['MSSQL_SA_PASSWORD'] -eq 'SenhaForte123!') {
+    throw 'Substitua a senha de exemplo por uma senha própria antes de prosseguir.'
 }
 
 if (-not $valores.ContainsKey('JWT_SIGNING_KEY')) {

@@ -18,7 +18,7 @@ Todos os projetos pertencem ao mesmo back-end monolítico. As referências segue
 
 ## Executar com Docker Compose
 
-Copie `.env.example` para `.env` e substitua a senha de exemplo por uma senha forte sua. `.env` está ignorado pelo Git. Em seguida, gere a chave JWT e informe, quando solicitado, o e-mail e uma senha própria para o primeiro administrador. Não use a senha do SQL Server como senha da conta. Use o PowerShell na raiz do projeto:
+Copie `.env.example` para `.env` e preencha `MSSQL_SA_PASSWORD` com uma senha forte e exclusiva. O template não contém senha pronta e `.env` está ignorado pelo Git. Em seguida, gere a chave JWT e informe, quando solicitado, o e-mail e uma senha própria para o primeiro administrador. Não use a senha do SQL Server como senha da conta. Use o PowerShell na raiz do projeto:
 
 ```powershell
 Copy-Item .env.example .env
@@ -31,7 +31,7 @@ Invoke-RestMethod http://localhost:5080/api/saude
 Invoke-RestMethod http://localhost:5080/api/saude/banco
 ```
 
-A API aguarda o SQL Server ficar saudável e aplica as migrations ao iniciar. A primeira inicialização pode levar alguns minutos. O Swagger fica em `http://localhost:5080/swagger`. Para inspecionar erros, use `docker compose logs api sqlserver`. Para parar sem apagar os dados, use `docker compose down`; o volume `dados_sqlserver` guarda os arquivos do SQL Server. `docker compose down -v` apaga esse volume e seus dados, portanto só o execute quando quiser descartá-los. A porta 1433 do SQL Server fica acessível apenas por `127.0.0.1` para depuração local. O SQL Server Developer serve para desenvolvimento e testes, não é uma licença de produção.
+A API aguarda o SQL Server ficar saudável e aplica as migrations ao iniciar. A primeira inicialização pode levar alguns minutos. O Swagger fica em `http://localhost:5080/swagger`. Para inspecionar erros, use `docker compose logs api sqlserver`. Para parar sem apagar os dados, use `docker compose down`; o volume `dados_sqlserver` guarda os arquivos do SQL Server. `docker compose down -v` apaga esse volume e seus dados, portanto só o execute quando quiser descartá-los. As portas 5080 e 1433 ficam acessíveis apenas por `127.0.0.1` nesta configuração local. O tráfego HTTP local não usa TLS; para acesso fora da máquina, configure HTTPS e uma implantação adequada. O SQL Server Developer serve para desenvolvimento e testes, não é uma licença de produção.
 
 ## Depurar a API pelo Visual Studio
 
@@ -93,6 +93,8 @@ docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -
 O teste de integração cria um SQL Server descartável próprio por meio do Testcontainers, aplica a migration, grava um registro e lê o mesmo registro em outro `DbContext`. Docker Desktop deve estar ligado para `dotnet test`. O comando `sqlcmd` solicita a senha interativamente. Os testes não usam o volume da aplicação.
 
 Para medir a cobertura das regras de domínio, execute `dotnet test .\OficinaMecanicaFase1.slnx -c Release --settings .\coverage.runsettings --collect:"XPlat Code Coverage" --results-directory .\TestResults`. O relatório resumido está em `docs/cobertura-dominio.md`; o XML Cobertura gerado fica em `TestResults` e não é versionado.
+
+O resultado da varredura de dependências e código, as correções de configuração local e a limitação do scan da imagem estão em `docs/relatorio-vulnerabilidades.md`. Refaça as consultas de vulnerabilidades antes de uma nova entrega, pois os avisos publicados podem mudar.
 
 ## Clientes e veículos
 
