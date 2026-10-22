@@ -584,6 +584,129 @@ public sealed class OrdensServicoTests
         Assert.Equal(2, historica.ServicosSolicitados.Length);
     }
 
+    [Fact]
+    public async Task ExecucaoRegistraServicosConsumoRealEDevolveReservaNaoUsada()
+    {
+        await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();
+        await sqlServer.StartAsync();
+        var conexao = new SqlConnectionStringBuilder(sqlServer.GetConnectionString())
+        {
+            InitialCatalog = $"OficinaExecucao_{Guid.NewGuid():N}"
+        };
+        var configuracoes = new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Oficina"] = conexao.ConnectionString,
+            ["Jwt:Issuer"] = "OficinaMecanicaFase1",
+            ["Jwt:Audience"] = "OficinaMecanicaFase1.Interno",
+            ["Jwt:SigningKey"] = Convert.ToBase64String(Encoding.UTF8.GetBytes("UmaChaveFixaDeTesteComMaisDeTrintaEDoisBytes!")),
+            ["Bootstrap:AdminEmail"] = "admin@execucao.test",
+            ["Bootstrap:AdminPassword"] = "AdminDeTeste123!"
+        };
+        using var fabrica = new OficinaApiFactory(configuracoes);
+        using var interno = fabrica.CreateClient();
+        using var publico = fabrica.CreateClient();
+        await AutenticarAsync(interno, "admin@execucao.test", "AdminDeTeste123!");
+        var pessoa = await CriarClienteAsync(interno, "Ana", "529.982.247-25");
+        var veiculo = await CriarVeiculoAsync(interno, pessoa.Id, "ABC1234");
+        var servicoFreio = await CriarServicoAsync(interno, "Freio", 150m);
+        var servicoRevisao = await CriarServicoAsync(interno, "Revisão", 90m);
+        var item = await CriarItemAsync(interno, "Pastilha", "Peca", "un");
+        var insumo = await CriarItemAsync(interno, "Óleo", "Insumo", "L");
+        foreach (var (email, senha, papel) in new[]
+        {
+            ("estoquista@execucao.test", "EstoquistaDeTeste123!", "Estoquista"),
+            ("mecanico@execucao.test", "MecanicoDeTeste123!", "Mecânico"),
+            ("atendente@execucao.test", "AtendenteDeTeste123!", "Atendente")
+        })
+            Assert.Equal(HttpStatusCode.Created, (await interno.PostAsJsonAsync("/api/interno/usuarios",
+                new { Email = email, Senha = senha, Papel = papel })).StatusCode);
+
+        await AutenticarAsync(interno, "estoquista@execucao.test", "EstoquistaDeTeste123!");
+        await ReporAsync(interno, item.Id, 2m);
+        await ReporAsync(interno, insumo.Id, 1.25m);
+        await AutenticarAsync(interno, "admin@execucao.test", "AdminDeTeste123!");
+        var criada = await interno.PostAsJsonAsync("/api/ordens-servico", new
+        {
+            clienteId = pessoa.Id, veiculoId = veiculo.Id,
+            servicosIds = new[] { servicoFreio.Id, servicoRevisao.Id },
+            itensNecessarios = new[]
+            {
+                new { itemEstoqueId = item.Id, quantidade = 2m },
+                new { itemEstoqueId = insumo.Id, quantidade = 1.25m }
+            }
+        });
+        Assert.Equal(HttpStatusCode.Created, criada.StatusCode);
+        var numero = (await criada.Content.ReadFromJsonAsync<OrdemServicoResponse>())!.Numero;
+        var rota = $"/api/ordens-servico/{numero}";
+        await AutenticarAsync(interno, "mecanico@execucao.test", "MecanicoDeTeste123!");
+        Assert.Equal(HttpStatusCode.OK, (await interno.PostAsync(rota + "/diagnostico/inicio", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await interno.PostAsJsonAsync(rota + "/diagnostico",
+            new RegistrarDiagnosticoRequest("Pastilhas e óleo precisam de troca"))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await interno.PostAsync(rota + "/orcamento", null)).StatusCode);
+        await AutenticarAsync(interno, "atendente@execucao.test", "AtendenteDeTeste123!");
+        var emissao = await interno.PostAsJsonAsync(rota + "/codigo-acesso/emissao", new EmitirCodigoAcessoRequest(null));
+        var codigo = (await emissao.Content.ReadFromJsonAsync<CodigoAcessoResponse>())!.Codigo;
+        Assert.Equal(HttpStatusCode.OK, (await publico.PostAsJsonAsync(
+            $"/api/cliente/ordens-servico/{numero}/orcamento/decisao",
+            new DecidirOrcamentoClienteRequest("529.982.247-25", codigo, true, null))).StatusCode);
+
+        var estoqueReservado = (await interno.GetFromJsonAsync<ItemEstoqueResponse>($"/api/itens-estoque/{item.Id}"))!;
+        Assert.Equal(2m, estoqueReservado.SaldoFisico);
+        Assert.Equal(2m, estoqueReservado.SaldoReservado);
+        Assert.Equal(0m, estoqueReservado.SaldoDisponivel);
+        Assert.Equal(HttpStatusCode.Forbidden, (await interno.PostAsync(rota + "/execucao/inicio", null)).StatusCode);
+        await AutenticarAsync(interno, "mecanico@execucao.test", "MecanicoDeTeste123!");
+        var inicio = await interno.PostAsync(rota + "/execucao/inicio", null);
+        Assert.Equal(HttpStatusCode.OK, inicio.StatusCode);
+        Assert.Equal("EmExecucao", (await inicio.Content.ReadFromJsonAsync<OrdemServicoResponse>())!.Status);
+        Assert.Equal(HttpStatusCode.BadRequest, (await interno.PostAsync(
+            $"{rota}/servicos/{Guid.NewGuid()}/inicio", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await interno.PostAsync(
+            $"{rota}/servicos/{servicoFreio.Id}/inicio", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await interno.PostAsync(
+            $"{rota}/servicos/{servicoRevisao.Id}/inicio", null)).StatusCode);
+
+        var consumo = await interno.PostAsJsonAsync(rota + "/consumos", new RegistrarConsumoRequest(
+        [new ConsumoItemRequest(item.Id, 1m), new ConsumoItemRequest(insumo.Id, 0.25m)]));
+        Assert.Equal(HttpStatusCode.OK, consumo.StatusCode);
+        var consumoExcedente = await interno.PostAsJsonAsync(rota + "/consumos",
+            new RegistrarConsumoRequest([new ConsumoItemRequest(item.Id, 2m)]));
+        Assert.Equal(HttpStatusCode.BadRequest, consumoExcedente.StatusCode);
+        var itemParcial = (await interno.GetFromJsonAsync<ItemEstoqueResponse>($"/api/itens-estoque/{item.Id}"))!;
+        Assert.Equal(1m, itemParcial.SaldoFisico);
+        Assert.Equal(1m, itemParcial.SaldoReservado);
+        Assert.Equal(0m, itemParcial.SaldoDisponivel);
+        Assert.Equal(HttpStatusCode.OK, (await interno.PostAsync(
+            $"{rota}/servicos/{servicoFreio.Id}/conclusao", null)).StatusCode);
+        var finalizada = await interno.PostAsync($"{rota}/servicos/{servicoRevisao.Id}/conclusao", null);
+        Assert.Equal(HttpStatusCode.OK, finalizada.StatusCode);
+        var ordemFinalizada = (await finalizada.Content.ReadFromJsonAsync<OrdemServicoResponse>())!;
+        Assert.Equal("Finalizada", ordemFinalizada.Status);
+        Assert.All(ordemFinalizada.ServicosSolicitados, servico =>
+        {
+            Assert.NotNull(servico.IniciadoEmUtc);
+            Assert.NotNull(servico.ConcluidoEmUtc);
+            Assert.NotNull(servico.IniciadoPorId);
+            Assert.NotNull(servico.ConcluidoPorId);
+        });
+        var itemFinal = (await interno.GetFromJsonAsync<ItemEstoqueResponse>($"/api/itens-estoque/{item.Id}"))!;
+        Assert.Equal(1m, itemFinal.SaldoFisico);
+        Assert.Equal(0m, itemFinal.SaldoReservado);
+        Assert.Equal(1m, itemFinal.SaldoDisponivel);
+        var insumoFinal = (await interno.GetFromJsonAsync<ItemEstoqueResponse>($"/api/itens-estoque/{insumo.Id}"))!;
+        Assert.Equal(1m, insumoFinal.SaldoFisico);
+        Assert.Equal(0m, insumoFinal.SaldoReservado);
+        using var escopo = fabrica.Services.CreateScope();
+        var db = escopo.ServiceProvider.GetRequiredService<OficinaDbContext>();
+        Assert.False(db.Database.HasPendingModelChanges());
+        Assert.Equal(2, await db.ConsumosItensOrdensServico.CountAsync(consumoItem =>
+            consumoItem.OrdemServicoId == db.OrdensServico.Where(ordem => ordem.Numero == numero)
+                .Select(ordem => ordem.Id).Single()));
+        Assert.All(await db.ReservasItensOrdensServico.Where(reserva => reserva.LiberadaEmUtc != null).ToArrayAsync(),
+            reserva => Assert.Equal(reserva.Quantidade, reserva.QuantidadeConsumida +
+                (reserva.ItemEstoqueId == item.Id ? 1m : 1m)));
+    }
+
     private static async Task<ClienteResponse> CriarClienteAsync(HttpClient cliente, string nome, string documento)
     {
         var resposta = await cliente.PostAsJsonAsync("/api/clientes", new ClienteRequest(nome, documento));

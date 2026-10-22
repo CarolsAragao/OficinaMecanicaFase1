@@ -8,6 +8,8 @@ public sealed class ReservaItemOrdemServico
     public Guid OrdemServicoId { get; private set; }
     public Guid ItemEstoqueId { get; private set; }
     public decimal Quantidade { get; private set; }
+    public decimal QuantidadeConsumida { get; private set; }
+    public decimal QuantidadeRestante => Quantidade - QuantidadeConsumida;
     public DateTimeOffset ReservadaEmUtc { get; private set; }
     public DateTimeOffset? LiberadaEmUtc { get; private set; }
 
@@ -29,5 +31,13 @@ public sealed class ReservaItemOrdemServico
     {
         if (LiberadaEmUtc is not null) throw new InvalidOperationException("A reserva já foi liberada.");
         LiberadaEmUtc = agora.ToUniversalTime();
+    }
+
+    public void RegistrarConsumo(decimal quantidade)
+    {
+        if (LiberadaEmUtc is not null || quantidade <= 0 || decimal.Round(quantidade, 3) != quantidade ||
+            quantidade > QuantidadeRestante)
+            throw new InvalidOperationException("O consumo excede a quantidade ainda reservada para a OS.");
+        QuantidadeConsumida += quantidade;
     }
 }

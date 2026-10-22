@@ -198,6 +198,21 @@ Quando o cliente aprova o orçamento, o sistema tenta reservar integralmente as 
 
 Os avisos identificam OS, item, quantidade solicitada e saldo disponível observado. Uma nova tentativa resolve os avisos anteriores e, se ainda houver falta, grava novos avisos. A migration `ReservarItensEAvisarEstoque` adiciona o estado da reserva e os avisos persistidos. Os testes de integração usam SQL Server para verificar reserva integral, recusa, reposição e concorrência pela última unidade.
 
+## Execução e consumo de estoque
+
+Somente um Mecânico pode iniciar a execução, depois de o cliente aprovar o orçamento e a reserva de todos os itens ser confirmada. A OS passa a `EmExecucao`. Cada serviço incluído e aprovado no orçamento tem início e conclusão registrados com instante UTC e identificação do Mecânico. Um serviço fora da OS ou do orçamento aprovado não pode ser iniciado nem concluído. Quando todos os serviços terminam, a OS passa a `Finalizada`.
+
+| Método | Rota | Uso |
+| --- | --- | --- |
+| POST | `/api/ordens-servico/{numero}/execucao/inicio` | Mecânico inicia a OS após aprovação e reserva. |
+| POST | `/api/ordens-servico/{numero}/servicos/{servicoId}/inicio` | Mecânico registra o início de um serviço autorizado. |
+| POST | `/api/ordens-servico/{numero}/servicos/{servicoId}/conclusao` | Mecânico registra a conclusão; o último serviço finaliza a OS. |
+| POST | `/api/ordens-servico/{numero}/consumos` | Mecânico registra o consumo real dos itens autorizados. |
+
+Exemplo de consumo: `{"consumos":[{"itemEstoqueId":"GUID-DA-PECA","quantidade":1},{"itemEstoqueId":"GUID-DO-INSUMO","quantidade":0.25}]}`. O consumo exige OS em execução e reserva ativa; peça exige quantidade inteira e insumo aceita até três casas decimais. Cada registro reduz o saldo físico e o reservado pelo mesmo valor. Ao concluir todos os serviços, o sistema libera na mesma transação a parte reservada que não foi consumida. Assim, o saldo disponível permanece como físico menos reservado, e a OS não pode consumir mais do que foi autorizado e reservado.
+
+A migration `ExecutarServicosERegistrarConsumoReal` persiste os marcos individuais, os consumos registrados e a quantidade consumida em cada reserva. A consulta interna da OS mostra os instantes e responsáveis pelo início e conclusão de cada serviço.
+
 O SQL Server é apropriado aqui porque o domínio tem relacionamentos entre cliente, veículo, OS, orçamento e estoque; chaves, restrições e transações ajudam a preservar consistência, especialmente em futuras reservas e baixas. A equipe também já conhece esse banco. EF Core fornece mapeamento e migrations versionadas, e a imagem Developer permite desenvolvimento local reproduzível.
 
 ## Consultar a API

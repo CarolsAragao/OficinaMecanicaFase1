@@ -77,6 +77,30 @@ public static class RotasOrdensServico
             .RequireAuthorization("Estoquistas")
             .Produces<TentativaReservaResponse>().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
 
+        ordens.MapPost("/{numero:long}/execucao/inicio", IniciarExecucaoAsync)
+            .WithName("IniciarExecucaoOrdemServico")
+            .WithSummary("Mecânico inicia a execução após orçamento aprovado e reserva confirmada.")
+            .RequireAuthorization("Mecanicos")
+            .Produces<OrdemServicoResponse>().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
+        ordens.MapPost("/{numero:long}/servicos/{servicoId:guid}/inicio", IniciarServicoAsync)
+            .WithName("IniciarServicoOrdemServico")
+            .WithSummary("Mecânico inicia um serviço autorizado no orçamento aprovado.")
+            .RequireAuthorization("Mecanicos")
+            .Produces<OrdemServicoResponse>().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
+        ordens.MapPost("/{numero:long}/servicos/{servicoId:guid}/conclusao", ConcluirServicoAsync)
+            .WithName("ConcluirServicoOrdemServico")
+            .WithSummary("Mecânico conclui um serviço iniciado; o último serviço finaliza a OS e libera saldo não consumido.")
+            .RequireAuthorization("Mecanicos")
+            .Produces<OrdemServicoResponse>().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
+        ordens.MapPost("/{numero:long}/consumos", RegistrarConsumoAsync)
+            .WithName("RegistrarConsumoRealOrdemServico")
+            .WithSummary("Mecânico informa consumo real autorizado, que baixa estoque e reserva na mesma transação.")
+            .RequireAuthorization("Mecanicos")
+            .Produces<OrdemServicoResponse>().ProducesValidationProblem().Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
         return app;
     }
 
@@ -176,6 +200,44 @@ public static class RotasOrdensServico
                 "A OS não possui orçamento aprovado aguardando reserva.", statusCode: 409),
             _ => Results.Ok(TentativaReservaResponse.De(resultado))
         };
+    }
+
+    private static async Task<IResult> IniciarExecucaoAsync(long numero, ClaimsPrincipal usuario,
+        GerenciadorExecucao gerenciador, CancellationToken cancelamento)
+    {
+        if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var mecanicoId)) return Results.Forbid();
+        var resultado = await gerenciador.IniciarExecucaoAsync(numero, mecanicoId, cancelamento);
+        return resultado.Erro == ErroOrdemServico.Nenhum
+            ? Results.Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+    }
+
+    private static async Task<IResult> IniciarServicoAsync(long numero, Guid servicoId,
+        ClaimsPrincipal usuario, GerenciadorExecucao gerenciador, CancellationToken cancelamento)
+    {
+        if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var mecanicoId)) return Results.Forbid();
+        var resultado = await gerenciador.IniciarServicoAsync(numero, servicoId, mecanicoId, cancelamento);
+        return resultado.Erro == ErroOrdemServico.Nenhum
+            ? Results.Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+    }
+
+    private static async Task<IResult> ConcluirServicoAsync(long numero, Guid servicoId,
+        ClaimsPrincipal usuario, GerenciadorExecucao gerenciador, CancellationToken cancelamento)
+    {
+        if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var mecanicoId)) return Results.Forbid();
+        var resultado = await gerenciador.ConcluirServicoAsync(numero, servicoId, mecanicoId, cancelamento);
+        return resultado.Erro == ErroOrdemServico.Nenhum
+            ? Results.Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+    }
+
+    private static async Task<IResult> RegistrarConsumoAsync(long numero, RegistrarConsumoRequest entrada,
+        ClaimsPrincipal usuario, GerenciadorExecucao gerenciador, CancellationToken cancelamento)
+    {
+        if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var mecanicoId)) return Results.Forbid();
+        var consumos = entrada.Consumos ?? [];
+        var resultado = await gerenciador.RegistrarConsumoAsync(numero, mecanicoId,
+            consumos.Select(item => new ConsumoSolicitado(item.ItemEstoqueId, item.Quantidade)).ToArray(), cancelamento);
+        return resultado.Erro == ErroOrdemServico.Nenhum
+            ? Results.Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
 
     private static IResult ResponderErro<T>(ResultadoOrdemServico<T> resultado) => resultado.Erro switch

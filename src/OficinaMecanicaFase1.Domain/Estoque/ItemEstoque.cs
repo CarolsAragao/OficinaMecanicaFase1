@@ -62,6 +62,14 @@ public sealed class ItemEstoque
         SaldoReservado -= quantidade;
     }
 
+    public void RegistrarConsumoReservado(decimal quantidade)
+    {
+        if (!QuantidadeValida(quantidade) || quantidade > SaldoReservado || quantidade > SaldoFisico)
+            throw new InvalidOperationException("O consumo excede o saldo reservado ou físico.");
+        SaldoFisico -= quantidade;
+        SaldoReservado -= quantidade;
+    }
+
     public EntradaEstoque RegistrarEntrada(decimal quantidade, DateTimeOffset registradaEmUtc, Guid usuarioId)
     {
         if (!QuantidadeValida(quantidade))

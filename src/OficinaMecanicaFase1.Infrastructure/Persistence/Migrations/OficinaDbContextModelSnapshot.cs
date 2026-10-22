@@ -155,6 +155,40 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Estoque.ConsumoItemOrdemServico", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ItemEstoqueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("MecanicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrdemServicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Quantidade")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<DateTimeOffset>("RegistradoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemEstoqueId");
+
+                    b.HasIndex("OrdemServicoId", "RegistradoEmUtc");
+
+                    b.ToTable("ConsumosItensOrdensServico", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_ConsumosItensOrdensServico_Quantidade", "[Quantidade] > 0");
+                        });
+                });
+
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.Estoque.EntradaEstoque", b =>
                 {
                     b.Property<Guid>("Id")
@@ -260,6 +294,10 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Quantidade")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal>("QuantidadeConsumida")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
 
@@ -518,6 +556,12 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("EncerradaPorRejeicaoEmUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("ExecucaoIniciadaEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ExecucaoIniciadaPorId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("MotivoEncerramento")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -580,6 +624,18 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("ConcluidoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ConcluidoPorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("IniciadoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("IniciadoPorId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("OrdemServicoId")
                         .HasColumnType("uniqueidentifier");
 
@@ -625,6 +681,21 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.Estoque.AvisoReservaRecusada", b =>
+                {
+                    b.HasOne("OficinaMecanicaFase1.Domain.Estoque.ItemEstoque", null)
+                        .WithMany()
+                        .HasForeignKey("ItemEstoqueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", null)
+                        .WithMany()
+                        .HasForeignKey("OrdemServicoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.Estoque.ConsumoItemOrdemServico", b =>
                 {
                     b.HasOne("OficinaMecanicaFase1.Domain.Estoque.ItemEstoque", null)
                         .WithMany()

@@ -19,6 +19,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
     public DbSet<Orcamento> Orcamentos => Set<Orcamento>();
     public DbSet<ReservaItemOrdemServico> ReservasItensOrdensServico => Set<ReservaItemOrdemServico>();
     public DbSet<AvisoReservaRecusada> AvisosReservaRecusada => Set<AvisoReservaRecusada>();
+    public DbSet<ConsumoItemOrdemServico> ConsumosItensOrdensServico => Set<ConsumoItemOrdemServico>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -141,6 +142,10 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.ToTable("ServicosSolicitadosOS");
             entity.HasKey(servico => servico.Id);
             entity.HasIndex(servico => new { servico.OrdemServicoId, servico.ServicoCatalogoId }).IsUnique();
+            entity.Property(servico => servico.IniciadoEmUtc);
+            entity.Property(servico => servico.IniciadoPorId);
+            entity.Property(servico => servico.ConcluidoEmUtc);
+            entity.Property(servico => servico.ConcluidoPorId);
             entity.HasOne<ServicoCatalogo>().WithMany().HasForeignKey(servico => servico.ServicoCatalogoId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
@@ -188,6 +193,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
                 table.HasCheckConstraint("CK_ReservasItensOrdensServico_Quantidade", "[Quantidade] > 0"));
             entity.HasKey(reserva => reserva.Id);
             entity.Property(reserva => reserva.Quantidade).HasPrecision(18, 3).IsRequired();
+            entity.Property(reserva => reserva.QuantidadeConsumida).HasPrecision(18, 3).IsRequired();
             entity.Property(reserva => reserva.ReservadaEmUtc).IsRequired();
             entity.HasIndex(reserva => new { reserva.OrdemServicoId, reserva.LiberadaEmUtc });
             entity.HasIndex(reserva => new { reserva.OrdemServicoId, reserva.ItemEstoqueId })
@@ -195,6 +201,20 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.HasOne<OrdemServico>().WithMany().HasForeignKey(reserva => reserva.OrdemServicoId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<ItemEstoque>().WithMany().HasForeignKey(reserva => reserva.ItemEstoqueId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ConsumoItemOrdemServico>(entity =>
+        {
+            entity.ToTable("ConsumosItensOrdensServico", table =>
+                table.HasCheckConstraint("CK_ConsumosItensOrdensServico_Quantidade", "[Quantidade] > 0"));
+            entity.HasKey(consumo => consumo.Id);
+            entity.Property(consumo => consumo.Quantidade).HasPrecision(18, 3).IsRequired();
+            entity.Property(consumo => consumo.RegistradoEmUtc).IsRequired();
+            entity.HasIndex(consumo => new { consumo.OrdemServicoId, consumo.RegistradoEmUtc });
+            entity.HasOne<OrdemServico>().WithMany().HasForeignKey(consumo => consumo.OrdemServicoId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ItemEstoque>().WithMany().HasForeignKey(consumo => consumo.ItemEstoqueId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

@@ -31,7 +31,10 @@ public sealed class OrdemServico
     public SituacaoReservaOrdemServico SituacaoReserva { get; private set; }
     public DateTimeOffset? ReservaConfirmadaEmUtc { get; private set; }
     public DateTimeOffset? ReservaRecusadaEmUtc { get; private set; }
-    public bool PodeIniciarExecucao => OrcamentoAprovadoEmUtc is not null &&
+    public DateTimeOffset? ExecucaoIniciadaEmUtc { get; private set; }
+    public Guid? ExecucaoIniciadaPorId { get; private set; }
+    public bool PodeIniciarExecucao => Status == StatusOrdemServico.AguardandoAprovacao &&
+        OrcamentoAprovadoEmUtc is not null &&
         EncerradaPorRejeicaoEmUtc is null && SituacaoReserva == SituacaoReservaOrdemServico.Confirmada;
     public byte[] Versao { get; private set; } = [];
     public IReadOnlyCollection<ServicoSolicitado> ServicosSolicitados => _servicosSolicitados;
@@ -208,4 +211,49 @@ public sealed class OrdemServico
             SituacaoReserva == SituacaoReservaOrdemServico.Confirmada)
             throw new InvalidOperationException("A OS não permite uma tentativa de reserva.");
     }
+
+    public MarcoOrdemServico IniciarExecucao(Guid mecanicoId, DateTimeOffset agora)
+    {
+        if (!PodeIniciarExecucao)
+            throw new InvalidOperationException("A execução exige orçamento aprovado e reserva confirmada.");
+        if (mecanicoId == Guid.Empty) throw new ArgumentException("Informe o mecânico.", nameof(mecanicoId));
+        Status = StatusOrdemServico.EmExecucao;
+        ExecucaoIniciadaEmUtc = agora.ToUniversalTime();
+        ExecucaoIniciadaPorId = mecanicoId;
+        var marco = new MarcoOrdemServico(Id, Status, "Execução iniciada", agora);
+        _marcos.Add(marco);
+        return marco;
+    }
+
+    public MarcoOrdemServico IniciarServico(Guid servicoId, Guid mecanicoId, DateTimeOffset agora)
+    {
+        if (Status != StatusOrdemServico.EmExecucao)
+            throw new InvalidOperationException("A OS precisa estar em execução para iniciar um serviço.");
+        var servico = _servicosSolicitados.SingleOrDefault(item => item.ServicoCatalogoId == servicoId);
+        if (servico is null) throw new ArgumentException("O serviço não foi autorizado nesta OS.", nameof(servicoId));
+        servico.Iniciar(mecanicoId, agora);
+        var marco = new MarcoOrdemServico(Id, Status, "Serviço iniciado", agora);
+        _marcos.Add(marco);
+        return marco;
+    }
+
+    public MarcoOrdemServico ConcluirServico(Guid servicoId, Guid mecanicoId, DateTimeOffset agora)
+    {
+        if (Status != StatusOrdemServico.EmExecucao)
+            throw new InvalidOperationException("A OS precisa estar em execução para concluir um serviço.");
+        var servico = _servicosSolicitados.SingleOrDefault(item => item.ServicoCatalogoId == servicoId);
+        if (servico is null) throw new ArgumentException("O serviço não foi autorizado nesta OS.", nameof(servicoId));
+        servico.Concluir(mecanicoId, agora);
+        var marco = new MarcoOrdemServico(Id, Status, "Serviço concluído", agora);
+        _marcos.Add(marco);
+        if (_servicosSolicitados.All(item => item.ConcluidoEmUtc is not null))
+        {
+            Status = StatusOrdemServico.Finalizada;
+            _marcos.Add(new MarcoOrdemServico(Id, Status, "OS finalizada", agora));
+        }
+        return marco;
+    }
+
+    public bool AutorizaItem(Guid itemEstoqueId) =>
+        _itensNecessarios.Any(item => item.ItemEstoqueId == itemEstoqueId);
 }

@@ -34,7 +34,9 @@ public sealed record OrcamentoResponse(Guid Id, long NumeroOrdemServico, DateTim
                 linha.Descricao, linha.UnidadeMedida, linha.Quantidade, linha.PrecoUnitario, linha.ValorTotal)).ToArray());
 }
 
-public sealed record ServicoSolicitadoResponse(Guid ServicoCatalogoId);
+public sealed record ServicoSolicitadoResponse(Guid ServicoCatalogoId,
+    DateTimeOffset? IniciadoEmUtc, Guid? IniciadoPorId,
+    DateTimeOffset? ConcluidoEmUtc, Guid? ConcluidoPorId);
 public sealed record ItemNecessarioResponse(
     Guid ItemEstoqueId, decimal Quantidade, decimal SaldoDisponivelConsultado);
 public sealed record MarcoOrdemServicoResponse(
@@ -45,14 +47,16 @@ public sealed record OrdemServicoResponse(
     ItemNecessarioResponse[] ItensNecessarios, MarcoOrdemServicoResponse[] Marcos,
     DateTimeOffset? OrcamentoAprovadoEmUtc, DateTimeOffset? EncerradaPorRejeicaoEmUtc,
     string? MotivoEncerramento, string SituacaoReserva, DateTimeOffset? ReservaConfirmadaEmUtc,
-    DateTimeOffset? ReservaRecusadaEmUtc, bool PodeIniciarExecucao)
+    DateTimeOffset? ReservaRecusadaEmUtc, bool PodeIniciarExecucao,
+    DateTimeOffset? ExecucaoIniciadaEmUtc, Guid? ExecucaoIniciadaPorId)
 {
     public static OrdemServicoResponse De(OrdemServico ordem) => new(
         ordem.Id, ordem.Numero, ordem.ClienteId, ordem.VeiculoId, ordem.Status.ToString(),
         ordem.CriadaEmUtc, new DiagnosticoResponse(ordem.DiagnosticoIniciadoEmUtc,
             ordem.DiagnosticoIniciadoPorId, ordem.DiagnosticoRegistradoEmUtc,
             ordem.DiagnosticoRegistradoPorId, ordem.DiagnosticoDescricao),
-        ordem.ServicosSolicitados.Select(servico => new ServicoSolicitadoResponse(servico.ServicoCatalogoId)).ToArray(),
+        ordem.ServicosSolicitados.Select(servico => new ServicoSolicitadoResponse(servico.ServicoCatalogoId,
+            servico.IniciadoEmUtc, servico.IniciadoPorId, servico.ConcluidoEmUtc, servico.ConcluidoPorId)).ToArray(),
         ordem.ItensNecessarios.Select(item => new ItemNecessarioResponse(
             item.ItemEstoqueId, item.Quantidade, item.SaldoDisponivelConsultado)).ToArray(),
         ordem.Marcos.OrderBy(marco => marco.RegistradoEmUtc)
@@ -60,8 +64,12 @@ public sealed record OrdemServicoResponse(
                 marco.Status.ToString(), marco.Descricao, marco.RegistradoEmUtc)).ToArray(),
         ordem.OrcamentoAprovadoEmUtc, ordem.EncerradaPorRejeicaoEmUtc, ordem.MotivoEncerramento,
         ordem.SituacaoReserva.ToString(), ordem.ReservaConfirmadaEmUtc,
-        ordem.ReservaRecusadaEmUtc, ordem.PodeIniciarExecucao);
+        ordem.ReservaRecusadaEmUtc, ordem.PodeIniciarExecucao,
+        ordem.ExecucaoIniciadaEmUtc, ordem.ExecucaoIniciadaPorId);
 }
+
+public sealed record ConsumoItemRequest(Guid ItemEstoqueId, decimal Quantidade);
+public sealed record RegistrarConsumoRequest(ConsumoItemRequest[]? Consumos);
 
 public sealed record ItemReservaInsuficienteResponse(Guid ItemEstoqueId, string Nome,
     decimal QuantidadeSolicitada, decimal SaldoDisponivel);
