@@ -1,6 +1,8 @@
 # Oficina Mecânica — Fase 1
 
-Este diretório é a raiz do **repositório do back-end** da oficina mecânica. Os diagramas e demais artefatos DDD estão em `Docs-tech-challenge/oficina_mecanica`, fora deste repositório, e orientam as regras de negócio.
+Este diretório é a raiz do **repositório do back-end** da oficina mecânica. A documentação DDD usada na implementação também está publicada em [`docs/ddd`](docs/ddd), com índice de navegação em [`docs/index.html`](docs/index.html).
+
+**Grupo:** Torque & Domínio — Tech Challenge. A [documentação DDD](docs/index.html), o [relatório de vulnerabilidades](docs/relatorio-vulnerabilidades.md) e o [roteiro da demonstração](docs/roteiro-video.md) compõem a entrega da Fase 1.
 
 ## Estrutura
 
