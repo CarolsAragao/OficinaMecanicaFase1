@@ -24,6 +24,13 @@ public static class RotasOrdensServico
             .Produces<OrdemServicoResponse>()
             .Produces(404).Produces(401).Produces(403);
 
+        ordens.MapPost("/{numero:long}/entrega", EntregarAsync)
+            .WithName("RegistrarEntregaOrdemServico")
+            .WithSummary("Atendente registra a entrega de uma OS finalizada.")
+            .RequireAuthorization("Atendentes")
+            .Produces<OrdemServicoResponse>().ProducesValidationProblem()
+            .Produces(404).Produces(401).Produces(403).ProducesProblem(409);
+
         ordens.MapPost("/{numero:long}/servicos", AdicionarServicoAsync)
             .WithName("AdicionarServicoSolicitado")
             .WithSummary("Adiciona um serviço ativo antes da aprovação do orçamento.")
@@ -122,6 +129,15 @@ public static class RotasOrdensServico
     {
         var ordem = await gerenciador.ObterAsync(numero, cancelamento);
         return ordem is null ? Results.NotFound() : Results.Ok(OrdemServicoResponse.De(ordem));
+    }
+
+    private static async Task<IResult> EntregarAsync(long numero, ClaimsPrincipal usuario,
+        GerenciadorOrdensServico gerenciador, CancellationToken cancelamento)
+    {
+        if (!Guid.TryParse(usuario.FindFirst("sub")?.Value, out var atendenteId)) return Results.Forbid();
+        var resultado = await gerenciador.EntregarAsync(numero, atendenteId, cancelamento);
+        return resultado.Erro == ErroOrdemServico.Nenhum
+            ? Results.Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
 
     private static async Task<IResult> AdicionarServicoAsync(

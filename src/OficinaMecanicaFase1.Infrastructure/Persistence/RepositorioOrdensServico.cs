@@ -47,6 +47,11 @@ public sealed class RepositorioOrdensServico(OficinaDbContext db) : IRepositorio
         db.OrdensServico.FirstOrDefaultAsync(ordem => ordem.Numero == numero &&
             db.Clientes.Any(cliente => cliente.Id == ordem.ClienteId && cliente.Documento == documento), cancelamento);
 
+    public Task<OrdemServico?> ObterAndamentoDoClienteAsync(long numero, string documento, CancellationToken cancelamento) =>
+        db.OrdensServico.AsNoTracking().Include(ordem => ordem.Marcos)
+            .FirstOrDefaultAsync(ordem => ordem.Numero == numero &&
+                db.Clientes.Any(cliente => cliente.Id == ordem.ClienteId && cliente.Documento == documento), cancelamento);
+
     public Task<Orcamento?> ObterOrcamentoAsync(Guid ordemServicoId, CancellationToken cancelamento) =>
         db.Orcamentos.Include(orcamento => orcamento.Linhas)
             .FirstOrDefaultAsync(orcamento => orcamento.OrdemServicoId == ordemServicoId, cancelamento);

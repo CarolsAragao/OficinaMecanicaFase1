@@ -33,6 +33,8 @@ public sealed class OrdemServico
     public DateTimeOffset? ReservaRecusadaEmUtc { get; private set; }
     public DateTimeOffset? ExecucaoIniciadaEmUtc { get; private set; }
     public Guid? ExecucaoIniciadaPorId { get; private set; }
+    public DateTimeOffset? EntregueEmUtc { get; private set; }
+    public Guid? EntreguePorId { get; private set; }
     public bool PodeIniciarExecucao => Status == StatusOrdemServico.AguardandoAprovacao &&
         OrcamentoAprovadoEmUtc is not null &&
         EncerradaPorRejeicaoEmUtc is null && SituacaoReserva == SituacaoReservaOrdemServico.Confirmada;
@@ -262,6 +264,19 @@ public sealed class OrdemServico
         if (Status != StatusOrdemServico.EmExecucao)
             throw new InvalidOperationException("Aditivos só podem ser registrados durante a execução.");
         var marco = new MarcoOrdemServico(Id, Status, descricao, agora);
+        _marcos.Add(marco);
+        return marco;
+    }
+
+    public MarcoOrdemServico RegistrarEntrega(Guid atendenteId, DateTimeOffset agora)
+    {
+        if (Status != StatusOrdemServico.Finalizada)
+            throw new InvalidOperationException("A OS só pode ser entregue depois de finalizada.");
+        if (atendenteId == Guid.Empty) throw new ArgumentException("Informe o atendente.", nameof(atendenteId));
+        Status = StatusOrdemServico.Entregue;
+        EntregueEmUtc = agora.ToUniversalTime();
+        EntreguePorId = atendenteId;
+        var marco = new MarcoOrdemServico(Id, Status, "OS entregue ao cliente", agora);
         _marcos.Add(marco);
         return marco;
     }

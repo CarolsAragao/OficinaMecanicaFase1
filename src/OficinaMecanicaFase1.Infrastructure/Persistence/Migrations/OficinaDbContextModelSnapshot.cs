@@ -647,6 +647,12 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("EncerradaPorRejeicaoEmUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("EntregueEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("EntreguePorId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset?>("ExecucaoIniciadaEmUtc")
                         .HasColumnType("datetimeoffset");
 

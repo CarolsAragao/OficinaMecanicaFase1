@@ -651,6 +651,8 @@ public sealed class OrdensServicoTests
             $"/api/cliente/ordens-servico/{numero}/orcamento/decisao",
             new DecidirOrcamentoClienteRequest("529.982.247-25", codigo, true, null))).StatusCode);
 
+        Assert.Equal(HttpStatusCode.BadRequest, (await interno.PostAsync(rota + "/entrega", null)).StatusCode);
+
         var estoqueReservado = (await interno.GetFromJsonAsync<ItemEstoqueResponse>($"/api/itens-estoque/{item.Id}"))!;
         Assert.Equal(2m, estoqueReservado.SaldoFisico);
         Assert.Equal(2m, estoqueReservado.SaldoReservado);
@@ -697,6 +699,32 @@ public sealed class OrdensServicoTests
         var insumoFinal = (await interno.GetFromJsonAsync<ItemEstoqueResponse>($"/api/itens-estoque/{insumo.Id}"))!;
         Assert.Equal(1m, insumoFinal.SaldoFisico);
         Assert.Equal(0m, insumoFinal.SaldoReservado);
+        var consultaPublica = $"/api/cliente/ordens-servico/{numero}/andamento/consulta";
+        Assert.Equal(HttpStatusCode.NotFound, (await publico.PostAsJsonAsync(consultaPublica,
+            new ConsultarOrcamentoClienteRequest("04.252.011/0001-10"))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await interno.PostAsync(rota + "/entrega", null)).StatusCode);
+        await AutenticarAsync(interno, "atendente@execucao.test", "AtendenteDeTeste123!");
+        var entrega = await interno.PostAsync(rota + "/entrega", null);
+        Assert.Equal(HttpStatusCode.OK, entrega.StatusCode);
+        var entregue = (await entrega.Content.ReadFromJsonAsync<OrdemServicoResponse>())!;
+        Assert.Equal("Entregue", entregue.Status);
+        Assert.NotNull(entregue.EntregueEmUtc);
+        Assert.NotNull(entregue.EntreguePorId);
+        Assert.Equal(HttpStatusCode.BadRequest, (await interno.PostAsync(rota + "/entrega", null)).StatusCode);
+        var andamento = await publico.PostAsJsonAsync(consultaPublica,
+            new ConsultarOrcamentoClienteRequest("529.982.247-25"));
+        Assert.Equal(HttpStatusCode.OK, andamento.StatusCode);
+        using (var json = JsonDocument.Parse(await andamento.Content.ReadAsStringAsync()))
+        {
+            var raiz = json.RootElement;
+            Assert.Equal(new[] { "marcos", "numero", "status", "ultimaAtualizacaoEmUtc" },
+                raiz.EnumerateObject().Select(propriedade => propriedade.Name).OrderBy(nome => nome));
+            Assert.Equal("Entregue", raiz.GetProperty("status").GetString());
+            Assert.Equal(entregue.EntregueEmUtc!.Value,
+                raiz.GetProperty("ultimaAtualizacaoEmUtc").GetDateTimeOffset());
+            Assert.Contains(raiz.GetProperty("marcos").EnumerateArray(), marco =>
+                marco.GetProperty("descricao").GetString() == "OS entregue ao cliente");
+        }
         using var escopo = fabrica.Services.CreateScope();
         var db = escopo.ServiceProvider.GetRequiredService<OficinaDbContext>();
         Assert.False(db.Database.HasPendingModelChanges());

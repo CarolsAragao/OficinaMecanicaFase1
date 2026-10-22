@@ -14,6 +14,7 @@ public interface IRepositorioOrdensServico
     Task<IReadOnlyDictionary<Guid, ItemEstoque>> ObterItensAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancelamento);
     Task<OrdemServico?> ObterAsync(long numero, CancellationToken cancelamento);
     Task<OrdemServico?> ObterDoClienteAsync(long numero, string documento, CancellationToken cancelamento);
+    Task<OrdemServico?> ObterAndamentoDoClienteAsync(long numero, string documento, CancellationToken cancelamento);
     Task<Orcamento?> ObterOrcamentoAsync(Guid ordemServicoId, CancellationToken cancelamento);
     Task<IReadOnlyCollection<ReservaItemOrdemServico>> ObterReservasAtivasAsync(Guid ordemServicoId, CancellationToken cancelamento);
     Task<IReadOnlyDictionary<Guid, ItemEstoque>> ObterItensParaReservaAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancelamento);

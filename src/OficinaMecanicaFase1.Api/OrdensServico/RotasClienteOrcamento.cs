@@ -19,6 +19,11 @@ public static class RotasClienteOrcamento
             .WithSummary("Cliente aprova ou rejeita com número da OS, CPF/CNPJ e código individual.")
             .Produces<OrcamentoResponse>().Produces(404).ProducesValidationProblem().ProducesProblem(409);
 
+        rotas.MapPost("/{numero:long}/andamento/consulta", ConsultarAndamentoAsync)
+            .WithName("ConsultarAndamentoCliente")
+            .WithSummary("Consulta pública por número da OS e CPF/CNPJ, com número, status, última atualização e marcos.")
+            .Produces<AndamentoOrdemServicoResponse>().Produces(404);
+
         return app;
     }
 
@@ -49,5 +54,14 @@ public static class RotasClienteOrcamento
             ErroOrdemServico.Conflito => Results.Problem(resultado.Mensagem, statusCode: 409),
             _ => Results.Problem("Não foi possível registrar a decisão.", statusCode: 500)
         };
+    }
+
+    private static async Task<IResult> ConsultarAndamentoAsync(long numero,
+        ConsultarOrcamentoClienteRequest entrada, HttpContext contexto,
+        GerenciadorOrdensServico gerenciador, CancellationToken cancelamento)
+    {
+        contexto.Response.Headers.CacheControl = "no-store";
+        var ordem = await gerenciador.ObterAndamentoClienteAsync(numero, entrada.Documento, cancelamento);
+        return ordem is null ? Results.NotFound() : Results.Ok(AndamentoOrdemServicoResponse.De(ordem));
     }
 }

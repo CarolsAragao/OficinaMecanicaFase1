@@ -227,6 +227,12 @@ A resposta registra preços vigentes, total, situação e `id` do aditivo. Apena
 
 A aprovação tenta reservar a quantidade adicional, sem baixar o estoque. Se faltar saldo, o aditivo fica com reserva `Recusada`; após a entrada de estoque, o Estoquista usa `POST /api/ordens-servico/{numero}/aditivos/{id}/reservas/tentativa`. Só a reserva `Confirmada` autoriza o serviço novo ou o consumo excedente. O consumo continua pela rota `POST /api/ordens-servico/{numero}/consumos` e só então reduz o saldo físico. Rejeição exige motivo e não autoriza o extra. Se `originalPodeProsseguir` for `false`, o impedimento fica registrado nos marcos e bloqueia início/conclusão de serviços e consumo; nenhum status novo é criado. Se for `true`, o original pode seguir, mas a OS não finaliza enquanto houver aditivo pendente ou sem reserva. O aditivo e seus preços ficam disponíveis na consulta interna `GET /api/ordens-servico/{numero}/aditivos/{id}`.
 
+## Finalização, entrega e acompanhamento (Etapa 12)
+
+Quando o Mecânico conclui o último serviço autorizado, a OS passa a `Finalizada` e ganha o marco `OS finalizada`. O Atendente registra a entrega em `POST /api/ordens-servico/{numero}/entrega` com JWT de `Atendente`. A rota aceita apenas uma OS `Finalizada`, grava o instante e o responsável, muda para `Entregue` e acrescenta o marco `OS entregue ao cliente`. Tentar entregar antes da finalização ou repetir a entrega retorna `400`.
+
+O cliente consulta `POST /api/cliente/ordens-servico/{numero}/andamento/consulta` com `{"documento":"529.982.247-25"}`. A rota é pública, mas só retorna dados quando número da OS e CPF/CNPJ correspondem; caso contrário, retorna `404`. A resposta contém somente `numero`, `status`, `ultimaAtualizacaoEmUtc` e `marcos` (status, descrição e instante). A última atualização é o instante do marco mais recente. Documento, preços, diagnóstico e notas internas não são expostos nessa consulta, conforme D-14.
+
 ## Consultar a API
 
 

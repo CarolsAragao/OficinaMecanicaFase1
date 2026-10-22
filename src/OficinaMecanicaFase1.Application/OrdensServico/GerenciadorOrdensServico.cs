@@ -1,6 +1,7 @@
 using OficinaMecanicaFase1.Application.Cadastros;
 using OficinaMecanicaFase1.Domain.OrdensServico;
 using OficinaMecanicaFase1.Domain.Orcamentos;
+using OficinaMecanicaFase1.Domain.Cadastros;
 
 namespace OficinaMecanicaFase1.Application.OrdensServico;
 
@@ -53,6 +54,26 @@ public sealed class GerenciadorOrdensServico(
 
     public Task<OrdemServico?> ObterAsync(long numero, CancellationToken cancelamento) =>
         repositorio.ObterAsync(numero, cancelamento);
+
+    public Task<OrdemServico?> ObterAndamentoClienteAsync(long numero, string? documento,
+        CancellationToken cancelamento)
+    {
+        var normalizado = DocumentoCliente.Normalizar(documento);
+        return normalizado is null
+            ? Task.FromResult<OrdemServico?>(null)
+            : repositorio.ObterAndamentoDoClienteAsync(numero, normalizado, cancelamento);
+    }
+
+    public async Task<ResultadoOrdemServico<OrdemServico>> EntregarAsync(long numero,
+        Guid atendenteId, CancellationToken cancelamento)
+    {
+        var ordem = await repositorio.ObterAsync(numero, cancelamento);
+        if (ordem is null) return NaoEncontrado<OrdemServico>();
+        try { repositorio.Adicionar(ordem.RegistrarEntrega(atendenteId, tempo.GetUtcNow())); }
+        catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
+        catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
+        return await SalvarAsync(ordem, cancelamento);
+    }
 
     public async Task<ResultadoOrdemServico<OrdemServico>> AdicionarServicoAsync(
         long numero, Guid servicoId, CancellationToken cancelamento)

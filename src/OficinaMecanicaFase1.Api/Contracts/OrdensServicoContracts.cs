@@ -41,6 +41,18 @@ public sealed record ItemNecessarioResponse(
     Guid ItemEstoqueId, decimal Quantidade, decimal SaldoDisponivelConsultado);
 public sealed record MarcoOrdemServicoResponse(
     string Status, string Descricao, DateTimeOffset RegistradoEmUtc);
+public sealed record AndamentoOrdemServicoResponse(long Numero, string Status,
+    DateTimeOffset UltimaAtualizacaoEmUtc, MarcoOrdemServicoResponse[] Marcos)
+{
+    public static AndamentoOrdemServicoResponse De(OrdemServico ordem)
+    {
+        var marcos = ordem.Marcos.OrderBy(marco => marco.RegistradoEmUtc)
+            .Select(marco => new MarcoOrdemServicoResponse(marco.Status.ToString(),
+                marco.Descricao, marco.RegistradoEmUtc)).ToArray();
+        return new AndamentoOrdemServicoResponse(ordem.Numero, ordem.Status.ToString(),
+            marcos.Length == 0 ? ordem.CriadaEmUtc : marcos[^1].RegistradoEmUtc, marcos);
+    }
+}
 public sealed record OrdemServicoResponse(
     Guid Id, long Numero, Guid ClienteId, Guid VeiculoId, string Status,
     DateTimeOffset CriadaEmUtc, DiagnosticoResponse Diagnostico, ServicoSolicitadoResponse[] ServicosSolicitados,
@@ -48,7 +60,8 @@ public sealed record OrdemServicoResponse(
     DateTimeOffset? OrcamentoAprovadoEmUtc, DateTimeOffset? EncerradaPorRejeicaoEmUtc,
     string? MotivoEncerramento, string SituacaoReserva, DateTimeOffset? ReservaConfirmadaEmUtc,
     DateTimeOffset? ReservaRecusadaEmUtc, bool PodeIniciarExecucao,
-    DateTimeOffset? ExecucaoIniciadaEmUtc, Guid? ExecucaoIniciadaPorId)
+    DateTimeOffset? ExecucaoIniciadaEmUtc, Guid? ExecucaoIniciadaPorId,
+    DateTimeOffset? EntregueEmUtc, Guid? EntreguePorId)
 {
     public static OrdemServicoResponse De(OrdemServico ordem) => new(
         ordem.Id, ordem.Numero, ordem.ClienteId, ordem.VeiculoId, ordem.Status.ToString(),
@@ -65,7 +78,8 @@ public sealed record OrdemServicoResponse(
         ordem.OrcamentoAprovadoEmUtc, ordem.EncerradaPorRejeicaoEmUtc, ordem.MotivoEncerramento,
         ordem.SituacaoReserva.ToString(), ordem.ReservaConfirmadaEmUtc,
         ordem.ReservaRecusadaEmUtc, ordem.PodeIniciarExecucao,
-        ordem.ExecucaoIniciadaEmUtc, ordem.ExecucaoIniciadaPorId);
+        ordem.ExecucaoIniciadaEmUtc, ordem.ExecucaoIniciadaPorId,
+        ordem.EntregueEmUtc, ordem.EntreguePorId);
 }
 
 public sealed record ConsumoItemRequest(Guid ItemEstoqueId, decimal Quantidade);
