@@ -6,8 +6,8 @@ Data da auditoria: 27/10/2026. Fonte normativa: SOAT - Fase 1 - Tech Challenge.p
 
 A matriz separa evidência de implementação de prova de funcionamento. Uma linha só conta no numerador se estiver marcada como cumprida; parcial e não verificável contam zero. Para funcionamento, foi exigido teste executado com sucesso da interface ou regra inteira, ou verificação direta de artefato estrutural/de entrega. Inspeção de rota sem execução não prova a API. O denominador são os 46 requisitos aplicáveis: dos 47 itens atômicos originalmente identificados, a exigência de repositório privado foi dispensada pela orientação posterior do professor informada pela equipe. A opção de arquitetura em camadas foi tratada como escolha permitida, não como obrigação adicional.
 
-- Implementados: **42/46 = 91,30%**.
-- Comprovadamente funcionais: **12/46 = 26,09%**.
+- Implementados: **43/46 = 93,48%**.
+- Comprovadamente funcionais: **13/46 = 28,26%**.
 
 ## Matriz de requisitos
 
@@ -45,19 +45,19 @@ A matriz separa evidência de implementação de prova de funcionamento. Uma lin
 | T05 | Dockerfile de build da aplicação | Dockerfile multiestágio .NET 10 com APP_UID | Arquivo inspecionado; build Docker bloqueado | cumprido | não verificável | Executar docker build |
 | T06 | docker-compose.yml para ambiente completo | docker-compose.yml com API, SQL Server, healthcheck e volume | docker compose config --quiet passou; up bloqueado | cumprido | parcial | Subir projeto isolado e testar endpoints |
 | T07 | README para execução local simples | README; .env.example; scripts; migrations/bootstrap | Exportação limpa: restore/build e 31 testes passaram; runtime bloqueado | cumprido | parcial | Validar up e login de administrador em clone |
-| D01 | Documentação DDD em Miro ou equivalente | docs/index.html e nove HTMLs; cinco Excalidraw originais | Navegação local testada; URL pública final bloqueada | cumprido | parcial | Habilitar Pages em main/docs e testar sem login |
-| D02 | Event Storming completo da OS | docs/ddd/04-event-storming-os.html e diagrama editável | HTML/SVG local aberto e inspecionado; remoto não validado | cumprido | parcial | Validar URL pública após publicação |
-| D03 | Event Storming completo de peças e insumos | docs/ddd/05-event-storming-estoque.html e diagrama editável | HTML/SVG local aberto e inspecionado; remoto não validado | cumprido | parcial | Validar URL pública após publicação |
-| D04 | Diagramas pertinentes da disciplina DDD | Domain Storytelling, modelo tático e Context Map em docs/ddd | Arquivos existem; modelo e mapa abertos localmente | cumprido | parcial | Validar acesso público de todos os diagramas |
-| D05 | Linguagem ubíqua aplicada | docs/ddd/09-linguagem-ubiqua-revisao.html | Glosário aberto localmente e comparado com nomes do domínio | cumprido | parcial | Validar URL pública; revisar após integração |
+| D01 | Documentação DDD em Miro ou equivalente | docs/index.html e nove HTMLs; cinco Excalidraw originais | Navegação local testada; Pages publicou índice e 14 links DDD com HTTP 200 | cumprido | parcial | Enviar documentação revisada ao remoto e retestar Pages |
+| D02 | Event Storming completo da OS | docs/ddd/04-event-storming-os.html e diagrama editável | HTML/SVG local inspecionado; URL pública respondeu HTTP 200 | cumprido | parcial | Enviar versão revisada ao remoto e inspecionar página publicada |
+| D03 | Event Storming completo de peças e insumos | docs/ddd/05-event-storming-estoque.html e diagrama editável | HTML/SVG local inspecionado; URL pública respondeu HTTP 200 | cumprido | parcial | Enviar versão revisada ao remoto e inspecionar página publicada |
+| D04 | Diagramas pertinentes da disciplina DDD | Domain Storytelling, modelo tático e Context Map em docs/ddd | Modelo e mapa locais abertos; todos os links DDD publicados responderam HTTP 200 | cumprido | parcial | Enviar versão revisada e inspecionar diagramas publicados |
+| D05 | Linguagem ubíqua aplicada | docs/ddd/09-linguagem-ubiqua-revisao.html | Glosário local inspecionado; URL pública respondeu HTTP 200 | cumprido | parcial | Enviar versão revisada; revisar após integração |
 | E01 | Repositório privado | Orientação posterior do professor informada pela equipe permite repositório público | GET anônimo respondeu HTTP 200 | dispensado | dispensado | Registrar a orientação posterior junto à entrega, se houver mensagem escrita |
 | E02 | Acesso de leitura de soat-architecture ao repositório | Repositório público abre sem autenticação | GET anônimo respondeu HTTP 200 em 27/10/2026 | cumprido | cumprido | Reconfirmar acesso público na entrega |
 | E03 | Vídeo de até 15 minutos | docs/roteiro-video.md; vídeo ausente | Nenhum vídeo ou duração verificados | ausente | ausente | Gravar, disponibilizar e verificar duração |
 | E04 | Código-fonte no repositório de entrega | Remoto origin e arquivos rastreados | Repositório público abre; commit local desta auditoria; push falhou antes da autenticação | parcial | parcial | Enviar commit auditado ao remoto e confirmar SHA publicado |
-| E05 | Relatório com análise do scan de código | docs/relatorio-vulnerabilidades.md | NuGet atualizado; Semgrep e Docker Scout não repetidos | parcial | parcial | Reexecutar scanner de código/imagem e analisar achados |
+| E05 | Relatório com análise do scan de código | docs/relatorio-vulnerabilidades.md | NuGet atualizado; Semgrep inconclusivo e Docker Scout não executado | parcial | parcial | Reexecutar scanner de código/imagem e analisar achados |
 | E06 | PDF informa nome do grupo | docs/entrega-fase-1.pdf | Extração e renderização visual: nome correto | cumprido | cumprido | Nenhuma |
 | E07 | PDF informa participantes e Discord | docs/entrega-fase-1.pdf | Extração e renderização visual: nomes, RMs e Discord corretos | cumprido | cumprido | Nenhuma |
-| E08 | PDF contém link da documentação | docs/entrega-fase-1.pdf; índice provisório | HTTP 200 no proxy, mas aviso de terceiro | parcial | parcial | Substituir pela URL do GitHub Pages publicada de `main/docs` |
+| E08 | PDF contém link da documentação | docs/entrega-fase-1.pdf; URL do GitHub Pages | Índice e 14 links DDD responderam HTTP 200; PDF regenerado e link clicável | cumprido | cumprido | Revalidar após envio das alterações ao remoto |
 | E09 | PDF contém link do repositório | docs/entrega-fase-1.pdf | Link clicável extráido e GET anônimo HTTP 200 | cumprido | cumprido | Reconfirmar acesso público ao repositório |
 | E10 | PDF contém análise de vulnerabilidades | docs/entrega-fase-1.pdf | Texto extraído e página renderizada, com limitações explícitas | cumprido | cumprido | Atualizar após scans pendentes |
 
@@ -70,7 +70,7 @@ A matriz separa evidência de implementação de prova de funcionamento. Uma lin
 
 ## Documentação DDD
 
-Os cinco diagramas Excalidraw do projeto são idênticos por SHA-256 aos originais. O índice e os nove HTMLs foram conferidos localmente: links relativos existentes, dois Event Stormings com SVG legível, modelo tático, Context Map e linguagem ubíqua. O GitHub Pages do projeto e os dois Event Stormings retornaram 404 como visitante. Um proxy de HTML retornou 200, porém apresenta aviso intermediário. Como o repositório pode permanecer público, a solução mais simples é habilitar Pages com fonte `main` e pasta `/docs`; não é necessário um repositório de documentação separado. Portanto, **a URL pública definitiva ainda não foi comprovada**.
+Os cinco diagramas Excalidraw do projeto são idênticos por SHA-256 aos originais. O índice e os nove HTMLs foram conferidos localmente: links relativos existentes, dois Event Stormings com SVG legível, modelo tático, Context Map e linguagem ubíqua. O GitHub Pages do projeto foi habilitado com fonte `main` e pasta `/docs`. Em 27/10/2026, o índice abriu no navegador e seus 14 links DDD responderam HTTP 200, incluindo ambos os Event Stormings. A URL definitiva é `https://carolsaragao.github.io/OficinaMecanicaFase1/`. A versão revisada dos documentos continua local até o envio dos commits; após o push, é necessário conferir a nova implantação como visitante.
 
 | Documento | Conteúdo e propósito |
 | --- | --- |
@@ -87,7 +87,7 @@ Os cinco diagramas Excalidraw do projeto são idênticos por SHA-256 aos origina
 
 ## PDF de entrega
 
-Caminho no projeto: docs/entrega-fase-1.pdf. **Uma página A4**, renderizada e conferida visualmente. Contém grupo, dois participantes com RMs/Discord, link do repositório, link provisório da documentação, análise atualizada de vulnerabilidades, resultados dos testes e pendências. O link do repositório respondeu HTTP 200 sem login; o link provisório do índice respondeu HTTP 200, mas mostrou aviso intermediário. O PDF informa que não deve ser submetido como definitivo antes de substituir esse link e confirmar os testes e scans pendentes.
+Caminho no projeto: docs/entrega-fase-1.pdf. **Uma página A4**, renderizada e conferida visualmente. Contém grupo, dois participantes com RMs/Discord, link do repositório, link público do GitHub Pages para a documentação, análise atualizada de vulnerabilidades, resultados dos testes e pendências. O link do repositório respondeu HTTP 200 sem login; o índice e 14 links DDD responderam HTTP 200 sem aviso intermediário. O PDF ainda exige atualização após os testes e scans pendentes e confirmação do envio ao remoto.
 
 ## Vulnerabilidades, segredos e histórico
 
@@ -102,10 +102,10 @@ Em 27/10/2026, dotnet list da solução com --vulnerable --include-transitive --
 
 ## Pendências para entrega
 
-1. Habilitar GitHub Pages do próprio repositório com fonte `main` e pasta `/docs`; testar índice, dois Event Stormings, demais diagramas e linguagem como visitante. Depois substituir o link provisório no PDF.
+1. GitHub Pages está ativo em `main/docs` e o PDF já contém sua URL. Enviar a documentação revisada ao remoto e retestar o índice, os dois Event Stormings, demais diagramas e linguagem como visitante.
 2. Com Docker Linux acessível, executar em clone limpo docker build, docker compose up, migrations/bootstrap, saúde, Swagger, login e fluxos HTTP; rodar os 11 testes de integração e repetir a cobertura. Não tocar em volumes existentes.
 3. Reexecutar Semgrep e scan de CVEs da imagem, analisar achados e atualizar relatório/PDF. Repetir dotnet format analyzers em ambiente que permita seu processo auxiliar.
-4. Enviar o commit local desta auditoria ao remoto e verificar o SHA publicado. O push pelo Git CLI falhou porque o Git Credential Manager não iniciou no ambiente; o Visual Studio estava minimizado e indisponível ao controle de interface. Reconfirmar que o repositório público e a documentação Pages abrem sem login.
+4. Enviar o commit local desta auditoria ao remoto e verificar o SHA publicado. O push pelo Git CLI falhou porque o Git Credential Manager não iniciou no ambiente; o Visual Studio estava minimizado e indisponível ao controle de interface. Após o push, reconfirmar que o repositório público e o GitHub Pages abrem sem login.
 5. Gravar e disponibilizar o vídeo de até 15 minutos, com duração e acesso verificados.
 
 **Conclusão:** ainda há pendências além do vídeo; a entrega não está pronta.

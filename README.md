@@ -311,9 +311,10 @@ Segundo a orientação posterior do professor informada pela equipe, o repositó
 pode permanecer **público**. A consulta anônima retornou HTTP 200 em 27/10/2026,
 o que permite a `soat-architecture` ler o código sem convite. A pasta `docs`
 já contém `index.html` e pode ser publicada pelo GitHub Pages do próprio
-repositório, selecionando `main` e `/docs` em Settings > Pages. O Pages respondeu
-404 nesta auditoria; habilite a publicação, valide o índice e os diagramas em
-janela anônima e substitua o link provisório no PDF pela URL definitiva.
+repositório, selecionando `main` e `/docs` em Settings > Pages. O Pages foi publicado em 27/10/2026 em
+`https://carolsaragao.github.io/OficinaMecanicaFase1/`: o índice e os 14 links
+DDD responderam HTTP 200. Após enviar as alterações locais ao remoto, valide
+novamente o site e use essa URL no PDF de entrega.
 
 ## Referências
 
