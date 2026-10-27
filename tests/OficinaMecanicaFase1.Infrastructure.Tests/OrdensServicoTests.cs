@@ -26,6 +26,7 @@ namespace OficinaMecanicaFase1.Infrastructure.Tests;
 public sealed class OrdensServicoTests
 {
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task ReservasSaoAtomicasAvisamEstoquistaEPreservamUltimaUnidadeSobConcorrencia()
     {
         await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();
@@ -196,6 +197,7 @@ public sealed class OrdensServicoTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task ApiExigeMecanicoEPublicaOrcamentoAposDiagnostico()
     {
         await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();
@@ -273,6 +275,7 @@ public sealed class OrdensServicoTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task ClienteConsultaEDecideComCodigoReemitidoERejeicaoLiberaReservas()
     {
         await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();
@@ -434,6 +437,7 @@ public sealed class OrdensServicoTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task ApiAbreOsComReferenciasValidasEConsultaEstoqueSemReservar()
     {
         await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();
@@ -586,6 +590,7 @@ public sealed class OrdensServicoTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task ExecucaoRegistraServicosConsumoRealEDevolveReservaNaoUsada()
     {
         await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();
@@ -774,6 +779,7 @@ public sealed class OrdensServicoTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task AditivoExigeDecisaoEReservaERejeicaoInseguraImpedeConclusao()
     {
         await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();

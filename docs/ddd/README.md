@@ -1,6 +1,10 @@
 # Documentação DDD — Oficina Mecânica
 
-Estes são os artefatos de modelagem que orientaram a implementação da Fase 1. O repositório é público. Para ler uma página HTML com os diagramas e estilos, abra o arquivo no GitHub, clique em **Download raw file** e abra o download no navegador. Os arquivos `.excalidraw` podem ser importados no Excalidraw para edição. Quando o GitHub Pages for ativado para a pasta `/docs`, o [índice navegável](https://carolsaragao.github.io/OficinaMecanicaFase1/) abrirá todos os documentos diretamente.
+Estes são os artefatos de modelagem que orientaram a implementação da
+Fase 1. O índice navegável fica em `docs/index.html`. Os nove HTMLs
+contêm diagramas SVG legíveis no navegador e os cinco arquivos `.excalidraw`
+permitem edição. A hospedagem pública é separada do repositório de código
+para que este possa atender ao requisito de acesso privado.
 
 | Ordem | Documento | Conteúdo |
 | --- | --- | --- |
@@ -13,5 +17,7 @@ Estes são os artefatos de modelagem que orientaram a implementação da Fase 1.
 | 07 | [Modelo tático DDD](07-modelo-tatico-ddd.html) | Agregados, entidades e responsabilidades. |
 | 08 | [Mapa de contextos](08-context-map.html) | Relações entre os limites do domínio. |
 | 09 | [Linguagem ubíqua](09-linguagem-ubiqua-revisao.html) | Termos oficiais e equivalências. |
+
+Na API, autenticação e papéis usam ASP.NET Core Identity com JWT; o mapa de contextos trata esse acesso como preocupação transversal, separada da identificação cadastral do cliente. O evento de estoque mínimo é opcional na decisão D-13 e não integra o MVP implementado.
 
 Os cinco [diagramas editáveis](diagramas) acompanham os documentos. O [relatório de vulnerabilidades](../relatorio-vulnerabilidades.md) e o [roteiro do vídeo](../roteiro-video.md) estão na pasta `docs`.

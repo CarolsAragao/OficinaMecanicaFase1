@@ -1,44 +1,38 @@
-# Relatório de vulnerabilidades e operação local
+# Relatório de vulnerabilidades e limitações da auditoria
 
-Verificação realizada em 22/10/2026 sobre o código e as dependências da
-solução .NET 10.
+Auditoria atualizada em **27/10/2026**. Resultados de scans anteriores, datados
+de 22/10/2026, não substituem a verificação atual.
 
-| Verificação | Resultado | Análise |
+| Verificação | Comando/procedimento | Resultado de 27/10/2026 |
 | --- | --- | --- |
-| `dotnet list OficinaMecanicaFase1.slnx package --vulnerable --include-transitive --format json` | Nenhum pacote vulnerável informado pelo NuGet | A consulta incluiu dependências diretas e transitivas dos cinco projetos. |
-| Semgrep `p/csharp` | 0 achados em 107 arquivos C#, 27 regras | Nenhum padrão coberto por esse conjunto de regras foi identificado. |
-| Semgrep `p/security-audit` | 0 achados em 147 arquivos, 3 regras aplicáveis | Verificação complementar; esse conjunto teve cobertura limitada para C#. |
-| `dotnet format analyzers --verify-no-changes --no-restore --severity warn` | Nenhum aviso | Analisadores .NET configurados na solução passaram. |
-| Arquivos rastreados pelo Git | Nenhum `.env`, arquivo de User Secrets ou chave privada rastreado | A busca foi feita pelos nomes dos arquivos, sem exibir valores. |
-| Docker Scout, imagem base `mcr.microsoft.com/dotnet/aspnet:10.0` | Scan de CVEs não concluído | A ferramenta exigiu login Docker. Este relatório não afirma ausência de CVEs na imagem. |
+| Dependências NuGet, diretas e transitivas, dos cinco projetos | `dotnet list .\OficinaMecanicaFase1.slnx package --vulnerable --include-transitive --no-restore --format json`, após `dotnet restore -m:1`, com cache NuGet gravável | Exit code 0; JSON com cinco projetos, sem lista de pacotes vulneráveis. A consulta vale para os avisos disponíveis na fonte NuGet na data. |
+| Analisadores .NET | `dotnet format analyzers .\OficinaMecanicaFase1.slnx --verify-no-changes --no-restore --severity warn` | **Não concluído**: o processo auxiliar falhou ao conectar ao named pipe por acesso negado. Não se declara zero avisos. |
+| Semgrep para C# e segurança | Comandos do relatório de 22/10/2026 | **Não repetido**: executável Semgrep ausente e mecanismo Docker indisponível. Os números anteriores de zero achados são históricos, sem validação atual. |
+| Docker Scout / CVEs da imagem | `docker scout cves mcr.microsoft.com/dotnet/aspnet:10.0` | **Não executado**: mecanismo Docker indisponível. Não há conclusão sobre CVEs da imagem base. |
+| Arquivos rastreados e histórico Git | Busca por arquivos de segredo, marcadores de chave privada, atribuições de credenciais e caminhos pessoais, sem imprimir valores | Nenhum arquivo `.env`, `.key`, `.pfx` ou User Secrets aparece nos 439 objetos históricos inspecionados; nenhum marcador de chave privada foi encontrado. O histórico contém placeholders de configuração em `.env.example`/`compose.yaml` e caminhos locais antigos de documentação. Os caminhos locais foram removidos da versão de trabalho. |
 
-O scan estático não substitui uma auditoria de segurança. A consulta do NuGet
-reflete os avisos disponíveis na data da execução; uma nova execução pode
-encontrar avisos publicados depois.
+A busca de segredos é heurística e não prova ausência absoluta de credenciais.
+Exemplos de CPF/CNPJ e senhas de teste aparecem nos testes como dados
+sintéticos; nenhuma credencial de execução foi identificada nos arquivos
+rastreados pela busca realizada. Não foram exibidos valores sensíveis.
 
-## Ajustes aplicados
+## Configuração de segurança observada
 
-- O template `.env.example` passou a exigir senha própria, sem senha pronta.
-- Os scripts locais recusam a antiga senha de exemplo.
-- A porta HTTP 5080 da API, assim como a 1433 do SQL Server, fica vinculada a
-  `127.0.0.1` no Compose. O Dockerfile já executa a API como usuário sem
-  privilégios; a imagem construída informou UID `1654`.
+- O JWT valida emissor, público, assinatura e expiração; as rotas internas
+  exigem papéis do ASP.NET Core Identity.
+- O cadastro valida CPF/CNPJ e placa no domínio. O código de decisão do
+  cliente é comparado por hash e exige motivo para reemissão.
+- O Compose vincula HTTP e SQL Server a `127.0.0.1` por padrão, com portas
+  configuráveis. O Dockerfile usa o usuário `APP_UID` sem privilégios.
+- O ambiente local usa HTTP sem TLS. Para exposição externa, é necessário
+  configurar HTTPS e uma implantação adequada; a configuração local não
+  demonstra segurança de produção.
 
-## Validação de operação
+## Próximas verificações
 
-Uma instância isolada foi iniciada com credenciais temporárias, volume Docker
-próprio e portas alternativas. O SQL Server ficou saudável, a API iniciou e
-`/api/saude`, `/api/saude/banco`, `/openapi/v1.json` e `/swagger/index.html`
-responderam HTTP `200`. Nenhum dado ou segredo dessa validação pertence ao
-repositório.
-
-Para repetir o scan de dependências e o scan estático na raiz do projeto:
-
-```powershell
-dotnet list .\OficinaMecanicaFase1.slnx package --vulnerable --include-transitive --format json
-dotnet format analyzers .\OficinaMecanicaFase1.slnx --verify-no-changes --no-restore --severity warn
-docker run --rm -v "${PWD}:/src" semgrep/semgrep semgrep scan --config p/csharp /src/src
-```
-
-Para completar a análise de CVEs da imagem, faça login no Docker Scout e
-execute `docker scout cves mcr.microsoft.com/dotnet/aspnet:10.0 --only-severity critical,high`.
+Com Docker Linux funcional, executar a suíte completa, a inicialização limpa
+via Compose e o scan de CVEs da imagem. Repetir Semgrep em ambiente com o
+executável disponível e `dotnet format analyzers` onde o named pipe do
+processo auxiliar seja permitido. Analisar e corrigir achados concretos antes
+da submissão. O resultado histórico de 22/10/2026 permanece apenas como
+registro, não como prova atual.

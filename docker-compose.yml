@@ -10,7 +10,7 @@ services:
     volumes:
       - dados_sqlserver:/var/opt/mssql
     ports:
-      - "127.0.0.1:1433:1433"
+      - "127.0.0.1:${SQLSERVER_PORT:-1433}:1433"
     healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -No -Q \"SELECT 1\" >/dev/null || exit 1"]
       interval: 10s
@@ -28,7 +28,7 @@ services:
       Bootstrap__AdminEmail: ${BOOTSTRAP_ADMIN_EMAIL:-}
       Bootstrap__AdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
     ports:
-      - "127.0.0.1:5080:8080"
+      - "127.0.0.1:${API_PORT:-5080}:8080"
     depends_on:
       sqlserver:
         condition: service_healthy

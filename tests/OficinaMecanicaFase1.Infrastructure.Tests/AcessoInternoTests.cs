@@ -22,6 +22,7 @@ namespace OficinaMecanicaFase1.Infrastructure.Tests;
 public sealed class AcessoInternoTests
 {
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task LoginJwtEPoliticasExigemTokenValidoEPapelAdequado()
     {
         await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();

@@ -12,7 +12,7 @@ Este diretório é a raiz do **repositório do back-end** da oficina mecânica. 
 - `src/OficinaMecanicaFase1.Domain`: regras e conceitos do domínio.
 - `src/OficinaMecanicaFase1.Infrastructure`: adaptações técnicas e persistência.
 - `tests/OficinaMecanicaFase1.Infrastructure.Tests`: integração com um SQL Server isolado por teste.
-- `compose.yaml`: API e SQL Server local com volume persistente.
+- `docker-compose.yml`: API e SQL Server local com volume persistente.
 - `scripts/Configurar-Depuracao-Local.ps1`: conexão local do Visual Studio armazenada nos User Secrets.
 - `scripts/Configurar-Acesso-Interno.ps1`: chave JWT local e primeiro administrador fora do Git.
 
@@ -34,6 +34,22 @@ Invoke-RestMethod http://localhost:5080/api/saude/banco
 ```
 
 A API aguarda o SQL Server ficar saudável e aplica as migrations ao iniciar. A primeira inicialização pode levar alguns minutos. O Swagger fica em `http://localhost:5080/swagger`. Para inspecionar erros, use `docker compose logs api sqlserver`. Para parar sem apagar os dados, use `docker compose down`; o volume `dados_sqlserver` guarda os arquivos do SQL Server. `docker compose down -v` apaga esse volume e seus dados, portanto só o execute quando quiser descartá-los. As portas 5080 e 1433 ficam acessíveis apenas por `127.0.0.1` nesta configuração local. O tráfego HTTP local não usa TLS; para acesso fora da máquina, configure HTTPS e uma implantação adequada. O SQL Server Developer serve para desenvolvimento e testes, não é uma licença de produção.
+
+### Windows, Linux e macOS
+
+No Windows, o script `Configurar-Acesso-Interno.ps1` preenche
+`JWT_SIGNING_KEY`, `BOOTSTRAP_ADMIN_EMAIL` e `BOOTSTRAP_ADMIN_PASSWORD` no
+`.env`. Em Linux ou macOS, copie o exemplo com `cp .env.example .env`,
+gere uma chave com `openssl rand -base64 32` e preencha manualmente essas
+três variáveis e `MSSQL_SA_PASSWORD`. A chave deve ter 32 bytes aleatórios
+codificados em Base64; escolha senhas próprias e não versionadas. `openssl`
+é necessário apenas para gerar a chave por esse método. Para iniciar, use
+`docker compose up --build -d` e verifique a porta indicada por `API_PORT`
+em `/api/saude` e `/api/saude/banco`. `API_PORT` e `SQLSERVER_PORT` no
+`.env` permitem trocar as portas de host; não alteram as portas internas
+dos contêineres. Em sistemas sem PowerShell, as demais operações opcionais
+dos scripts podem ser feitas pelas rotas HTTP documentadas ou por um
+PowerShell instalado separadamente.
 
 ## Depurar a API pelo Visual Studio
 
@@ -92,9 +108,9 @@ dotnet test .\OficinaMecanicaFase1.slnx -c Release
 docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -No -Q 'SELECT MigrationId FROM OficinaMecanica.dbo.__EFMigrationsHistory'
 ```
 
-O teste de integração cria um SQL Server descartável próprio por meio do Testcontainers, aplica a migration, grava um registro e lê o mesmo registro em outro `DbContext`. Docker Desktop deve estar ligado para `dotnet test`. O comando `sqlcmd` solicita a senha interativamente. Os testes não usam o volume da aplicação.
+O teste de integração cria um SQL Server descartável próprio por meio do Testcontainers, aplica a migration, grava um registro e lê o mesmo registro em outro `DbContext`. O mecanismo Docker Linux deve estar ligado para a suíte completa. O comando `sqlcmd` solicita a senha interativamente. Os testes não usam o volume da aplicação. Os testes de integração possuem a categoria `Integration`; para executar somente as regras sem Docker, use `dotnet test .\OficinaMecanicaFase1.slnx -c Release --filter "Category!=Integration"`. A suíte completa exige Docker funcional.
 
-Para medir a cobertura das regras de domínio, execute `dotnet test .\OficinaMecanicaFase1.slnx -c Release --settings .\coverage.runsettings --collect:"XPlat Code Coverage" --results-directory .\TestResults`. O relatório resumido está em `docs/cobertura-dominio.md`; o XML Cobertura gerado fica em `TestResults` e não é versionado.
+Para medir a cobertura das regras de domínio, execute `dotnet test .\OficinaMecanicaFase1.slnx -c Release --settings .\coverage.runsettings --collect:"XPlat Code Coverage" --results-directory .\TestResults`. O relatório resumido está em `docs/cobertura-dominio.md`; a medição auditada está versionada em `docs/cobertura-auditoria.cobertura.xml`. Novas execuções geram XML em `TestResults`.
 
 O resultado da varredura de dependências e código, as correções de configuração local e a limitação do scan da imagem estão em `docs/relatorio-vulnerabilidades.md`. Refaça as consultas de vulnerabilidades antes de uma nova entrega, pois os avisos publicados podem mudar.
 
@@ -221,7 +237,7 @@ A migration `ExecutarServicosERegistrarConsumoReal` persiste os marcos individua
 
 O SQL Server é apropriado aqui porque o domínio tem relacionamentos entre cliente, veículo, OS, orçamento e estoque; chaves, restrições e transações ajudam a preservar consistência, especialmente em futuras reservas e baixas. A equipe também já conhece esse banco. EF Core fornece mapeamento e migrations versionadas, e a imagem Developer permite desenvolvimento local reproduzível.
 
-## Etapa 11: aditivos e consumo excedente
+## Aditivos e consumo excedente
 
 Durante `EmExecucao`, o Mecânico registra um reparo adicional ou a necessidade de consumir além da reserva em `POST /api/ordens-servico/{numero}/aditivos` (JWT de Mecânico). O corpo usa `tipo` 1 para `ReparoAdicional` ou 2 para `ConsumoExcedente`. Um reparo exige `servicoCatalogoId` novo e pode ter `itemEstoqueId` e `quantidade` (use `null` e `0` se não houver item). Consumo excedente exige um item já autorizado, sem serviço novo. Exemplo:
 
@@ -233,7 +249,7 @@ A resposta registra preços vigentes, total, situação e `id` do aditivo. Apena
 
 A aprovação tenta reservar a quantidade adicional, sem baixar o estoque. Se faltar saldo, o aditivo fica com reserva `Recusada`; após a entrada de estoque, o Estoquista usa `POST /api/ordens-servico/{numero}/aditivos/{id}/reservas/tentativa`. Só a reserva `Confirmada` autoriza o serviço novo ou o consumo excedente. O consumo continua pela rota `POST /api/ordens-servico/{numero}/consumos` e só então reduz o saldo físico. Rejeição exige motivo e não autoriza o extra. Se `originalPodeProsseguir` for `false`, o impedimento fica registrado nos marcos e bloqueia início/conclusão de serviços e consumo; nenhum status novo é criado. Se for `true`, o original pode seguir, mas a OS não finaliza enquanto houver aditivo pendente ou sem reserva. O aditivo e seus preços ficam disponíveis na consulta interna `GET /api/ordens-servico/{numero}/aditivos/{id}`.
 
-## Finalização, entrega e acompanhamento (Etapa 12)
+## Finalização, entrega e acompanhamento
 
 Quando o Mecânico conclui o último serviço autorizado, a OS passa a `Finalizada` e ganha o marco `OS finalizada`. O Atendente registra a entrega em `POST /api/ordens-servico/{numero}/entrega` com JWT de `Atendente`. A rota aceita apenas uma OS `Finalizada`, grava o instante e o responsável, muda para `Entregue` e acrescenta o marco `OS entregue ao cliente`. Tentar entregar antes da finalização ou repetir a entrega retorna `400`.
 
@@ -273,14 +289,10 @@ Start-Process http://localhost:5080/swagger
 
 As configurações comuns ficam em `src/OficinaMecanicaFase1.Api/appsettings.json`. A conexão é obrigatória via variável `ConnectionStrings__Oficina` ou User Secrets `ConnectionStrings:Oficina`; não grave senhas nem a chave JWT em arquivos versionados. Falhas inesperadas e respostas HTTP sem corpo usam `application/problem+json` quando o cliente aceita JSON, com um identificador `traceId` para suporte.
 
-## Local previsto
-
-`C:\Users\Carol\Desktop\OficinaMecanicaFase1`
-
 ## Pré-requisitos
 
 - SDK .NET **10** (verificar com `dotnet --list-sdks`).
-- Docker Desktop iniciado, usando contêineres **Linux** com arquitetura **x86-64/amd64** e memória suficiente para SQL Server (ao menos 2 GB destinados ao mecanismo; recomenda-se mais para API e demais processos).
+- Docker Engine ou Docker Desktop iniciado, usando contêineres **Linux** com arquitetura **x86-64/amd64** e memória suficiente para SQL Server (ao menos 2 GB destinados ao mecanismo; recomenda-se mais para API e demais processos).
 - Docker Compose disponível (`docker compose version`).
 - Git configurado e acesso a uma conta capaz de criar o repositório.
 
@@ -292,22 +304,16 @@ powershell -ExecutionPolicy Bypass -File .\scripts\Verificar-Ambiente.ps1
 
 O script só lê o ambiente; não instala programas nem expõe senhas. Se não houver SDK .NET 10 ou Docker, instale pelas páginas oficiais abaixo e execute novamente. O Docker será usado para executar SQL Server e a API em contêineres quando o ambiente completo estiver configurado.
 
-## Repositório GitHub
+## Repositório de entrega e documentação pública
 
-Depois de confirmar que esta é a única raiz do projeto, crie **um repositório chamado `oficina-mecanica-fase-1`** na conta GitHub da equipe e associe-o a esta pasta. Ele pode ser público. Se esta pasta ainda não tiver `.git`, os comandos básicos são:
-
-```powershell
-git init
-git branch -M main
-git add .
-git commit -m "Configurar repositório da oficina mecânica"
-git remote add origin https://github.com/SEU_USUARIO/oficina-mecanica-fase-1.git
-git push -u origin main
-```
-
-Se a pasta **já tiver** `.git`, não rode `git init` nem sobrescreva o `origin`: confira `git status` e `git remote -v` antes de integrar os arquivos. Não coloque credenciais nem senhas no Git.
-
-Substitua `SEU_USUARIO` pelo usuário ou organização proprietária. Se o repositório for público, confira que outra pessoa consegue abrir e clonar a URL sem autenticação. Se for privado, convide `soat-architecture` e confira o acesso após o aceite. Registre a URL efetiva do repositório.
+O remoto de entrega é `https://github.com/CarolsAragao/OficinaMecanicaFase1.git`.
+O enunciado exige que esse repositório seja **privado** e acessível ao usuário
+`soat-architecture`. A visibilidade e o acesso devem ser confirmados por um
+administrador antes da submissão. O GitHub Pages da URL do projeto respondeu
+404 na auditoria de 27/10/2026; os arquivos HTML em `docs/ddd` precisam de uma
+hospedagem pública separada antes de tornar o repositório privado. A URL pública
+definitiva da documentação deve ser validada como visitante e inserida no PDF
+de entrega. Não use uma URL do repositório privado como única documentação.
 
 ## Referências
 

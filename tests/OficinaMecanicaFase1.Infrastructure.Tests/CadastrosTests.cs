@@ -48,6 +48,7 @@ public sealed class CadastrosTests
         Assert.Null(PlacaVeiculo.Normalizar(informada));
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task CadastrosRespeitamDocumentoPlacaProprietarioEAutorizacao()
     {
         await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();
@@ -160,6 +161,7 @@ public sealed class CadastrosTests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task IndiceUnicoDePlacaProtegeConcorrenciaDiretamenteNoBanco()
     {
         await using var sqlServer = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04").Build();

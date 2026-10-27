@@ -1,36 +1,32 @@
-# Cobertura dos testes do domínio
+# Cobertura dos domínios críticos
 
-Medição em 22/10/2026, com .NET 10, xUnit, WebApplicationFactory e SQL Server
-isolado pelo Testcontainers. A suíte passou com **32 testes**, sem falhas ou
-testes ignorados.
+Medição executada em 27/10/2026, com .NET 10, xUnit e Coverlet. Foram
+executados **31 testes sem dependência de Docker**, todos aprovados. O
+comando foi:
+
+```powershell
+dotnet test .\OficinaMecanicaFase1.slnx -c Release --no-build -m:1 --filter "Category!=Integration" --settings .\coverage.runsettings --collect:"XPlat Code Coverage" --results-directory .\TestResults
+```
 
 | Área do domínio | Linhas cobertas | Cobertura de linhas |
 | --- | ---: | ---: |
-| Cadastros | 54 / 58 | 93,10% |
+| Cadastros | 56 / 58 | 96,55% |
 | Catálogo | 16 / 17 | 94,12% |
-| Estoque | 94 / 108 | 87,04% |
-| Orçamentos | 74 / 82 | 90,24% |
-| Ordens de serviço | 217 / 233 | 93,13% |
-| **Domínio completo** | **455 / 498** | **91,36%** |
+| Estoque | 99 / 108 | 91,67% |
+| Orçamentos | 73 / 82 | 89,02% |
+| Ordens de serviço | 215 / 233 | 92,27% |
+| **Domínio completo** | **459 / 498** | **92,16%** |
 
-A cobertura de ramos foi 325 / 458 (70,96%). O critério de 80% do plano foi
-avaliado por **linhas** das classes do projeto `OficinaMecanicaFase1.Domain`.
-Todas as áreas do domínio superaram esse percentual. A métrica de ramos fica
-registrada separadamente e não foi usada como substituto da cobertura de linhas.
+Cobertura de ramificações: **388 / 458 (84,71%)**. O XML Cobertura está em
+`docs/cobertura-auditoria.cobertura.xml`.
+O arquivo `coverage.runsettings` inclui apenas o assembly
+`OficinaMecanicaFase1.Domain`; API, aplicação, infraestrutura, migrations,
+testes e código gerado ficam fora do denominador.
 
-A suíte cobre abertura, diagnóstico, orçamento, aprovação, reserva, consumo,
-finalização e entrega; rejeição do orçamento; aditivos aprovados e rejeitados;
-recusa de reserva, reposição e nova tentativa; e concorrência na última unidade
-de estoque. Os testes unitários isolam as regras de transição, cronologia,
-quantidade e saldo, além do cálculo do tempo médio.
-
-Para reproduzir a medição na raiz do repositório, com Docker Desktop em
-execução:
-
-```powershell
-dotnet test .\OficinaMecanicaFase1.slnx -c Release --settings .\coverage.runsettings --collect:"XPlat Code Coverage" --results-directory .\TestResults
-```
-
-O XML Cobertura fica em `TestResults/<id>/coverage.cobertura.xml`. Essa pasta é
-ignorada pelo Git. `coverage.runsettings` inclui apenas o assembly de domínio;
-testes, API, infraestrutura, migrations e código gerado não entram no percentual.
+A suíte completa tem **42 testes** após as adições. Onze testes de integração
+usam SQL Server iniciado pelo Testcontainers e foram bloqueados nesta máquina
+por `DockerUnavailableException` (mecanismo Docker indisponível). Portanto,
+a medição acima comprova regras de domínio, mas **não comprova os fluxos HTTP
+e de persistência**. O resultado anterior de 22/10/2026 não é utilizado como
+evidência atual. Para validar integralmente, iniciar Docker Linux e executar
+a suíte completa, sem filtro, em um clone limpo.

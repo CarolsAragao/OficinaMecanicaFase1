@@ -34,7 +34,12 @@ if ($senha -eq 'SenhaForte123!') {
     throw 'Substitua a senha de exemplo por uma senha própria no arquivo .env.'
 }
 
-$conexao = "Server=localhost,1433;Database=OficinaMecanica;User Id=sa;Password=$senha;Encrypt=True;TrustServerCertificate=True"
+$linhaPorta = Get-Content -LiteralPath $arquivoEnv | Where-Object { $_ -match '^SQLSERVER_PORT=' } | Select-Object -Last 1
+$porta = if ($linhaPorta) { $linhaPorta.Substring('SQLSERVER_PORT='.Length) } else { '1433' }
+if ($porta -notmatch '^\d{1,5}$' -or [int]$porta -lt 1 -or [int]$porta -gt 65535) {
+    throw 'SQLSERVER_PORT deve ser uma porta valida entre 1 e 65535.'
+}
+$conexao = "Server=localhost,$porta;Database=OficinaMecanica;User Id=sa;Password=$senha;Encrypt=True;TrustServerCertificate=True"
 & dotnet user-secrets set 'ConnectionStrings:Oficina' $conexao --project $projetoApi
 if ($LASTEXITCODE -ne 0) {
     throw 'Não foi possível salvar a conexão nos User Secrets da API.'
