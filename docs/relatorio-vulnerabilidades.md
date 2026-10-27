@@ -7,8 +7,8 @@ de 22/10/2026, não substituem a verificação atual.
 | --- | --- | --- |
 | Dependências NuGet, diretas e transitivas, dos cinco projetos | `dotnet list .\OficinaMecanicaFase1.slnx package --vulnerable --include-transitive --no-restore --format json`, após `dotnet restore -m:1`, com cache NuGet gravável | Exit code 0; JSON com cinco projetos, sem lista de pacotes vulneráveis. A consulta vale para os avisos disponíveis na fonte NuGet na data. |
 | Analisadores .NET | `dotnet format analyzers .\OficinaMecanicaFase1.slnx --verify-no-changes --no-restore --severity warn` | **Não concluído**: o processo auxiliar falhou ao conectar ao named pipe por acesso negado. Não se declara zero avisos. |
-| Semgrep para C# e segurança | Comandos do relatório de 22/10/2026 | **Não repetido**: executável Semgrep ausente e mecanismo Docker indisponível. Os números anteriores de zero achados são históricos, sem validação atual. |
-| Docker Scout / CVEs da imagem | `docker scout cves mcr.microsoft.com/dotnet/aspnet:10.0` | **Não executado**: mecanismo Docker indisponível. Não há conclusão sobre CVEs da imagem base. |
+| Semgrep para C# e segurança | Semgrep 1.182.1 instalado isoladamente; `scan --config auto src tests` | **Tentativa inconclusiva**: o processo `semgrep-core` falhou em `socketpair` neste ambiente. Não há relatório de achados atual. Os números anteriores são históricos. |
+| Docker Scout / CVEs da imagem | `docker scout cves` na imagem da API construída e na imagem base | **Não executado**: o aplicativo mostrou Engine running, mas o terminal recebeu acesso negado ao pipe do Docker. Não há conclusão sobre CVEs das imagens. |
 | Arquivos rastreados e histórico Git | Busca por arquivos de segredo, marcadores de chave privada, atribuições de credenciais e caminhos pessoais, sem imprimir valores | Nenhum arquivo `.env`, `.key`, `.pfx` ou User Secrets aparece nos 439 objetos históricos inspecionados; nenhum marcador de chave privada foi encontrado. O histórico contém placeholders de configuração em `.env.example`/`compose.yaml` e caminhos locais antigos de documentação. Os caminhos locais foram removidos da versão de trabalho. |
 
 A busca de segredos é heurística e não prova ausência absoluta de credenciais.
@@ -31,8 +31,8 @@ rastreados pela busca realizada. Não foram exibidos valores sensíveis.
 ## Próximas verificações
 
 Com Docker Linux funcional, executar a suíte completa, a inicialização limpa
-via Compose e o scan de CVEs da imagem. Repetir Semgrep em ambiente com o
-executável disponível e `dotnet format analyzers` onde o named pipe do
-processo auxiliar seja permitido. Analisar e corrigir achados concretos antes
+via Compose e o scan de CVEs da imagem. Repetir Semgrep em terminal onde o
+processo auxiliar possa abrir `socketpair`, e `dotnet format analyzers` onde
+o named pipe do processo auxiliar seja permitido. Analisar e corrigir achados concretos antes
 da submissão. O resultado histórico de 22/10/2026 permanece apenas como
 registro, não como prova atual.

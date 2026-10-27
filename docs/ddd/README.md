@@ -3,8 +3,9 @@
 Estes são os artefatos de modelagem que orientaram a implementação da
 Fase 1. O índice navegável fica em `docs/index.html`. Os nove HTMLs
 contêm diagramas SVG legíveis no navegador e os cinco arquivos `.excalidraw`
-permitem edição. A hospedagem pública é separada do repositório de código
-para que este possa atender ao requisito de acesso privado.
+permitem edição. Como o repositório de código pode permanecer público conforme orientação
+posterior do professor informada pela equipe, estes arquivos podem ser
+publicados diretamente pelo GitHub Pages, com fonte `main` e pasta `/docs`. Se a equipe preferir um repositório público separado só para DDD, copie apenas `docs/index.html`, `docs/.nojekyll` e `docs/ddd/` para a raiz dele e escolha `main` e `/(root)` no Pages.
 
 | Ordem | Documento | Conteúdo |
 | --- | --- | --- |

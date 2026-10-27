@@ -307,13 +307,13 @@ O script só lê o ambiente; não instala programas nem expõe senhas. Se não h
 ## Repositório de entrega e documentação pública
 
 O remoto de entrega é `https://github.com/CarolsAragao/OficinaMecanicaFase1.git`.
-O enunciado exige que esse repositório seja **privado** e acessível ao usuário
-`soat-architecture`. A visibilidade e o acesso devem ser confirmados por um
-administrador antes da submissão. O GitHub Pages da URL do projeto respondeu
-404 na auditoria de 27/10/2026; os arquivos HTML em `docs/ddd` precisam de uma
-hospedagem pública separada antes de tornar o repositório privado. A URL pública
-definitiva da documentação deve ser validada como visitante e inserida no PDF
-de entrega. Não use uma URL do repositório privado como única documentação.
+Segundo a orientação posterior do professor informada pela equipe, o repositório
+pode permanecer **público**. A consulta anônima retornou HTTP 200 em 27/10/2026,
+o que permite a `soat-architecture` ler o código sem convite. A pasta `docs`
+já contém `index.html` e pode ser publicada pelo GitHub Pages do próprio
+repositório, selecionando `main` e `/docs` em Settings > Pages. O Pages respondeu
+404 nesta auditoria; habilite a publicação, valide o índice e os diagramas em
+janela anônima e substitua o link provisório no PDF pela URL definitiva.
 
 ## Referências
 

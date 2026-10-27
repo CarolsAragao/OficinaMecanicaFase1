@@ -4,10 +4,10 @@ Data da auditoria: 27/10/2026. Fonte normativa: SOAT - Fase 1 - Tech Challenge.p
 
 ## Critério e percentuais
 
-A matriz separa evidência de implementação de prova de funcionamento. Uma linha só conta no numerador se estiver marcada como cumprida; parcial e não verificável contam zero. Para funcionamento, foi exigido teste executado com sucesso da interface ou regra inteira, ou verificação direta de artefato estrutural/de entrega. Inspeção de rota sem execução não prova a API. O denominador são os 47 requisitos obrigatórios atômicos do enunciado; a opção de arquitetura em camadas foi tratada como escolha permitida, não como obrigação adicional.
+A matriz separa evidência de implementação de prova de funcionamento. Uma linha só conta no numerador se estiver marcada como cumprida; parcial e não verificável contam zero. Para funcionamento, foi exigido teste executado com sucesso da interface ou regra inteira, ou verificação direta de artefato estrutural/de entrega. Inspeção de rota sem execução não prova a API. O denominador são os 46 requisitos aplicáveis: dos 47 itens atômicos originalmente identificados, a exigência de repositório privado foi dispensada pela orientação posterior do professor informada pela equipe. A opção de arquitetura em camadas foi tratada como escolha permitida, não como obrigação adicional.
 
-- Implementados: **41/47 = 87,23%**.
-- Comprovadamente funcionais: **11/47 = 23,40%**.
+- Implementados: **42/46 = 91,30%**.
+- Comprovadamente funcionais: **12/46 = 26,09%**.
 
 ## Matriz de requisitos
 
@@ -45,20 +45,20 @@ A matriz separa evidência de implementação de prova de funcionamento. Uma lin
 | T05 | Dockerfile de build da aplicação | Dockerfile multiestágio .NET 10 com APP_UID | Arquivo inspecionado; build Docker bloqueado | cumprido | não verificável | Executar docker build |
 | T06 | docker-compose.yml para ambiente completo | docker-compose.yml com API, SQL Server, healthcheck e volume | docker compose config --quiet passou; up bloqueado | cumprido | parcial | Subir projeto isolado e testar endpoints |
 | T07 | README para execução local simples | README; .env.example; scripts; migrations/bootstrap | Exportação limpa: restore/build e 31 testes passaram; runtime bloqueado | cumprido | parcial | Validar up e login de administrador em clone |
-| D01 | Documentação DDD em Miro ou equivalente | docs/index.html e nove HTMLs; cinco Excalidraw originais | Navegação local testada; URL pública final bloqueada | cumprido | parcial | Publicar cópia estática independente e testar sem login |
+| D01 | Documentação DDD em Miro ou equivalente | docs/index.html e nove HTMLs; cinco Excalidraw originais | Navegação local testada; URL pública final bloqueada | cumprido | parcial | Habilitar Pages em main/docs e testar sem login |
 | D02 | Event Storming completo da OS | docs/ddd/04-event-storming-os.html e diagrama editável | HTML/SVG local aberto e inspecionado; remoto não validado | cumprido | parcial | Validar URL pública após publicação |
 | D03 | Event Storming completo de peças e insumos | docs/ddd/05-event-storming-estoque.html e diagrama editável | HTML/SVG local aberto e inspecionado; remoto não validado | cumprido | parcial | Validar URL pública após publicação |
 | D04 | Diagramas pertinentes da disciplina DDD | Domain Storytelling, modelo tático e Context Map em docs/ddd | Arquivos existem; modelo e mapa abertos localmente | cumprido | parcial | Validar acesso público de todos os diagramas |
 | D05 | Linguagem ubíqua aplicada | docs/ddd/09-linguagem-ubiqua-revisao.html | Glosário aberto localmente e comparado com nomes do domínio | cumprido | parcial | Validar URL pública; revisar após integração |
-| E01 | Repositório privado | origin GitHub: CarolsAragao/OficinaMecanicaFase1 | GET anônimo respondeu HTTP 200; API indica público | ausente | ausente | Administrador: publicar DDD separadamente, depois tornar privado |
-| E02 | Acesso de soat-architecture ao repositório | Nenhuma prova de convite/aceite disponível | Sem acesso administrativo para consultar colaboração privada | não verificável | não verificável | Administrador: convidar usuário e confirmar aceite/acesso |
+| E01 | Repositório privado | Orientação posterior do professor informada pela equipe permite repositório público | GET anônimo respondeu HTTP 200 | dispensado | dispensado | Registrar a orientação posterior junto à entrega, se houver mensagem escrita |
+| E02 | Acesso de leitura de soat-architecture ao repositório | Repositório público abre sem autenticação | GET anônimo respondeu HTTP 200 em 27/10/2026 | cumprido | cumprido | Reconfirmar acesso público na entrega |
 | E03 | Vídeo de até 15 minutos | docs/roteiro-video.md; vídeo ausente | Nenhum vídeo ou duração verificados | ausente | ausente | Gravar, disponibilizar e verificar duração |
 | E04 | Código-fonte no repositório de entrega | Remoto origin e arquivos rastreados | Repositório público abre; commit local desta auditoria; push falhou antes da autenticação | parcial | parcial | Enviar commit auditado ao remoto e confirmar SHA publicado |
 | E05 | Relatório com análise do scan de código | docs/relatorio-vulnerabilidades.md | NuGet atualizado; Semgrep e Docker Scout não repetidos | parcial | parcial | Reexecutar scanner de código/imagem e analisar achados |
 | E06 | PDF informa nome do grupo | docs/entrega-fase-1.pdf | Extração e renderização visual: nome correto | cumprido | cumprido | Nenhuma |
 | E07 | PDF informa participantes e Discord | docs/entrega-fase-1.pdf | Extração e renderização visual: nomes, RMs e Discord corretos | cumprido | cumprido | Nenhuma |
-| E08 | PDF contém link da documentação | docs/entrega-fase-1.pdf; índice provisório | HTTP 200 no proxy, mas aviso de terceiro e dependência do repo público | parcial | parcial | Substituir pelo endereço público independente |
-| E09 | PDF contém link do repositório | docs/entrega-fase-1.pdf | Link clicável extráido e GET anônimo HTTP 200 | cumprido | cumprido | Confirmar acesso autorizado após privatização |
+| E08 | PDF contém link da documentação | docs/entrega-fase-1.pdf; índice provisório | HTTP 200 no proxy, mas aviso de terceiro | parcial | parcial | Substituir pela URL do GitHub Pages publicada de `main/docs` |
+| E09 | PDF contém link do repositório | docs/entrega-fase-1.pdf | Link clicável extráido e GET anônimo HTTP 200 | cumprido | cumprido | Reconfirmar acesso público ao repositório |
 | E10 | PDF contém análise de vulnerabilidades | docs/entrega-fase-1.pdf | Texto extraído e página renderizada, com limitações explícitas | cumprido | cumprido | Atualizar após scans pendentes |
 
 ## Testes, cobertura e execução limpa
@@ -70,7 +70,7 @@ A matriz separa evidência de implementação de prova de funcionamento. Uma lin
 
 ## Documentação DDD
 
-Os cinco diagramas Excalidraw do projeto são idênticos por SHA-256 aos originais. O índice e os nove HTMLs foram conferidos localmente: links relativos existentes, dois Event Stormings com SVG legível, modelo tático, Context Map e linguagem ubíqua. O GitHub Pages do projeto e os dois Event Stormings retornaram 404 como visitante. Um proxy de HTML retornou 200, porém apresenta aviso intermediário e depende do repositório continuar público. A tentativa de publicar uma hospedagem independente com acesso público foi rejeitada pela aprovação automática da ferramenta. Portanto, **não há URL pública definitiva comprovada**.
+Os cinco diagramas Excalidraw do projeto são idênticos por SHA-256 aos originais. O índice e os nove HTMLs foram conferidos localmente: links relativos existentes, dois Event Stormings com SVG legível, modelo tático, Context Map e linguagem ubíqua. O GitHub Pages do projeto e os dois Event Stormings retornaram 404 como visitante. Um proxy de HTML retornou 200, porém apresenta aviso intermediário. Como o repositório pode permanecer público, a solução mais simples é habilitar Pages com fonte `main` e pasta `/docs`; não é necessário um repositório de documentação separado. Portanto, **a URL pública definitiva ainda não foi comprovada**.
 
 | Documento | Conteúdo e propósito |
 | --- | --- |
@@ -87,25 +87,25 @@ Os cinco diagramas Excalidraw do projeto são idênticos por SHA-256 aos origina
 
 ## PDF de entrega
 
-Caminho no projeto: docs/entrega-fase-1.pdf. **Uma página A4**, renderizada e conferida visualmente. Contém grupo, dois participantes com RMs/Discord, link do repositório, link provisório da documentação, análise atualizada de vulnerabilidades, resultados dos testes e pendências. O link do repositório respondeu HTTP 200 sem login; o link provisório do índice respondeu HTTP 200, mas mostrou aviso intermediário. O PDF informa que não deve ser submetido como definitivo antes de substituir esse link e confirmar os bloqueios.
+Caminho no projeto: docs/entrega-fase-1.pdf. **Uma página A4**, renderizada e conferida visualmente. Contém grupo, dois participantes com RMs/Discord, link do repositório, link provisório da documentação, análise atualizada de vulnerabilidades, resultados dos testes e pendências. O link do repositório respondeu HTTP 200 sem login; o link provisório do índice respondeu HTTP 200, mas mostrou aviso intermediário. O PDF informa que não deve ser submetido como definitivo antes de substituir esse link e confirmar os testes e scans pendentes.
 
 ## Vulnerabilidades, segredos e histórico
 
-Em 27/10/2026, dotnet list da solução com --vulnerable --include-transitive --no-restore --format json terminou com código 0 e sem pacotes vulneráveis nos cinco projetos. Semgrep não estava disponível; o scan de código de 22/10/2026 não foi reproduzido. Docker Scout não foi executado. dotnet format analyzers falhou por acesso negado ao named pipe. A busca heurística em arquivos rastreados e 439 objetos históricos não encontrou arquivos .env, chaves privadas ou User Secrets; achou placeholders antigos e caminhos locais, removidos da versão de trabalho. Nenhum valor sensível foi reproduzido neste relatório.
+Em 27/10/2026, dotnet list da solução com --vulnerable --include-transitive --no-restore --format json terminou com código 0 e sem pacotes vulneráveis nos cinco projetos. Semgrep 1.182.1 foi instalado isoladamente e o scan foi tentado, mas o semgrep-core falhou em socketpair; não há resultado de achados. Docker Scout não foi executado porque o terminal recebeu acesso negado ao mecanismo Docker, embora o aplicativo mostrasse Engine running. dotnet format analyzers falhou por acesso negado ao named pipe. A busca heurística em arquivos rastreados e 439 objetos históricos não encontrou arquivos .env, chaves privadas ou User Secrets; achou placeholders antigos e caminhos locais, removidos da versão de trabalho. Nenhum valor sensível foi reproduzido neste relatório.
 
 ## Alterações realizadas
 
 - Acrescentados dez testes úteis de domínio e marcados onze testes dependentes de Docker como Integration; cobertura e relatório versionados.
-- Compose renomeado para docker-compose.yml com API_PORT e SQLSERVER_PORT configuráveis; .env.example e script de depuração ajustados; README esclarece Linux/macOS e repositório privado.
+- Compose renomeado para docker-compose.yml com API_PORT e SQLSERVER_PORT configuráveis; .env.example e script de depuração ajustados; README esclarece Linux/macOS e a orientação posterior que permite repositório público.
 - Índice e documentação DDD revisados, com nomes de domínio, diagramas ampliados, referências temporárias e marcadores de data removidos; escopo reescrito para refletir a API.
 - Relatório de vulnerabilidades e PDF atualizados para distinguir scans executados de verificações bloqueadas.
 
 ## Pendências para entrega
 
-1. Publicar docs/index.html e toda docs/ddd em hospedagem pública independente, sem aviso intermediário; testar índice, dois Event Stormings, demais diagramas e linguagem como visitante. Depois substituir o link provisório no PDF.
+1. Habilitar GitHub Pages do próprio repositório com fonte `main` e pasta `/docs`; testar índice, dois Event Stormings, demais diagramas e linguagem como visitante. Depois substituir o link provisório no PDF.
 2. Com Docker Linux acessível, executar em clone limpo docker build, docker compose up, migrations/bootstrap, saúde, Swagger, login e fluxos HTTP; rodar os 11 testes de integração e repetir a cobertura. Não tocar em volumes existentes.
 3. Reexecutar Semgrep e scan de CVEs da imagem, analisar achados e atualizar relatório/PDF. Repetir dotnet format analyzers em ambiente que permita seu processo auxiliar.
-4. Enviar o commit local desta auditoria ao remoto e verificar o SHA publicado. O push pelo Git CLI falhou porque o Git Credential Manager não iniciou no ambiente; o Visual Studio estava minimizado e indisponível ao controle de interface. Após a documentação pública independente estar funcional, um administrador deve tornar o repositório privado, convidar soat-architecture e comprovar o acesso após aceite.
+4. Enviar o commit local desta auditoria ao remoto e verificar o SHA publicado. O push pelo Git CLI falhou porque o Git Credential Manager não iniciou no ambiente; o Visual Studio estava minimizado e indisponível ao controle de interface. Reconfirmar que o repositório público e a documentação Pages abrem sem login.
 5. Gravar e disponibilizar o vídeo de até 15 minutos, com duração e acesso verificados.
 
 **Conclusão:** ainda há pendências além do vídeo; a entrega não está pronta.
