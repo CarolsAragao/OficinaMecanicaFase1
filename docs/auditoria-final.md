@@ -1,13 +1,13 @@
 # Auditoria final da Fase 1 — Oficina Mecânica
 
-Data da auditoria: 27/10/2026. Fonte normativa: SOAT - Fase 1 - Tech Challenge.pdf, páginas 2–5. Projeto analisado: OficinaMecanicaFase1. Remoto: https://github.com/CarolsAragao/OficinaMecanicaFase1.git.
+Auditoria iniciada em 27/10/2026; scan da imagem atualizado em 28/10/2026. Fonte normativa: SOAT - Fase 1 - Tech Challenge.pdf, páginas 2–5. Projeto analisado: OficinaMecanicaFase1. Remoto: https://github.com/CarolsAragao/OficinaMecanicaFase1.git.
 
 ## Critério e percentuais
 
 A matriz separa evidência de implementação de prova de funcionamento. Uma linha só conta no numerador se estiver marcada como cumprida; parcial e não verificável contam zero. Para funcionamento, foi exigido teste executado com sucesso da interface ou regra inteira, ou verificação direta de artefato estrutural/de entrega. Inspeção de rota sem execução não prova a API. O denominador são os 46 requisitos aplicáveis: dos 47 itens atômicos originalmente identificados, a exigência de repositório privado foi dispensada pela orientação posterior do professor informada pela equipe. A opção de arquitetura em camadas foi tratada como escolha permitida, não como obrigação adicional.
 
 - Implementados: **43/46 = 93,48%**.
-- Comprovadamente funcionais: **13/46 = 28,26%**.
+- Comprovadamente funcionais: **14/46 = 30,43%**.
 
 ## Matriz de requisitos
 
@@ -36,8 +36,8 @@ A matriz separa evidência de implementação de prova de funcionamento. Uma lin
 | S02 | Validar CPF/CNPJ | DocumentoCliente.Normalizar | Teorias de documentos válidos/inválidos passaram | cumprido | cumprido | Nenhuma |
 | S03 | Validar placa | PlacaVeiculo.Normalizar | Teorias de placas válidas/inválidas passaram | cumprido | cumprido | Nenhuma |
 | Q01 | Testes unitários dos fluxos principais | InvariantesDominioTests, RegrasDominioTests e demais testes de domínio | 31 testes sem Docker passaram | cumprido | cumprido | Nenhuma para o escopo unitário |
-| Q02 | Testes de integração dos fluxos principais | 11 testes HTTP/SQL com WebApplicationFactory e Testcontainers | 11 falharam antes do teste por DockerUnavailableException | cumprido | não verificável | Executar suíte completa com Docker Linux |
-| Q03 | Cobertura mínima de 80% nos domínios críticos | coverage.runsettings; docs/cobertura-auditoria.cobertura.xml | 459/498 linhas e 388/458 ramos medidos | cumprido | cumprido | Repetir com suíte completa quando Docker funcionar |
+| Q02 | Testes de integração dos fluxos principais | 11 testes HTTP/SQL com WebApplicationFactory e Testcontainers | Resumo enviado: 42/42 aprovados, 0 falhas, 0 ignorados; execução em 108,7 s no clone com Docker | cumprido | cumprido | Guardar o resumo ou TRX como evidência de entrega |
+| Q03 | Cobertura mínima de 80% nos domínios críticos | coverage.runsettings; docs/cobertura-auditoria.cobertura.xml | 459/498 linhas e 388/458 ramos medidos | cumprido | cumprido | Repetir com suíte completa se for necessária nova medição |
 | T01 | Back-end monolítico | OficinaMecanicaFase1.slnx; uma API e quatro projetos em camadas | Inspeção de referências e build Release | cumprido | cumprido | Nenhuma |
 | T02 | Justificar banco escolhido | README: SQL Server, relações, restrições e transações | Justificativa inspecionada | cumprido | cumprido | Nenhuma |
 | T03 | APIs RESTful | RotasCadastros, RotasCatalogoEstoque e RotasOrdensServico | Rotas e verbos inspecionados; HTTP bloqueado | cumprido | não verificável | Executar contratos HTTP |
@@ -54,7 +54,7 @@ A matriz separa evidência de implementação de prova de funcionamento. Uma lin
 | E02 | Acesso de leitura de soat-architecture ao repositório | Repositório público abre sem autenticação | GET anônimo respondeu HTTP 200 em 27/10/2026 | cumprido | cumprido | Reconfirmar acesso público na entrega |
 | E03 | Vídeo de até 15 minutos | docs/roteiro-video.md; vídeo ausente | Nenhum vídeo ou duração verificados | ausente | ausente | Gravar, disponibilizar e verificar duração |
 | E04 | Código-fonte no repositório de entrega | Remoto origin e arquivos rastreados | Repositório público abre; commit local desta auditoria; push falhou antes da autenticação | parcial | parcial | Enviar commit auditado ao remoto e confirmar SHA publicado |
-| E05 | Relatório com análise do scan de código | docs/relatorio-vulnerabilidades.md | NuGet atualizado; Semgrep inconclusivo e Docker Scout não executado | parcial | parcial | Reexecutar scanner de código/imagem e analisar achados |
+| E05 | Relatório com análise do scan de código | docs/relatorio-vulnerabilidades.md | NuGet sem achados; Trivy: 26 achados no Ubuntu (0 altos/críticos), 0 em dependências .NET; Semgrep: 101 arquivos, 83 regras, 0 achados | parcial | parcial | Acompanhar os 26 achados da imagem e enviar o relatório atualizado |
 | E06 | PDF informa nome do grupo | docs/entrega-fase-1.pdf | Extração e renderização visual: nome correto | cumprido | cumprido | Nenhuma |
 | E07 | PDF informa participantes e Discord | docs/entrega-fase-1.pdf | Extração e renderização visual: nomes, RMs e Discord corretos | cumprido | cumprido | Nenhuma |
 | E08 | PDF contém link da documentação | docs/entrega-fase-1.pdf; URL do GitHub Pages | Índice e 14 links DDD responderam HTTP 200; PDF regenerado e link clicável | cumprido | cumprido | Revalidar após envio das alterações ao remoto |
@@ -63,9 +63,9 @@ A matriz separa evidência de implementação de prova de funcionamento. Uma lin
 
 ## Testes, cobertura e execução limpa
 
-- Build Release no projeto original: aprovado, sem avisos. Suíte completa: **42 testes, 31 passaram e 11 falharam**; as 11 falhas foram DockerUnavailableException antes de iniciar SQL Server. Não houve falha de asserção de negócio nos testes que puderam executar.
+- Build Release no projeto original: aprovado, sem avisos. Na execução auditada original, a suíte tinha **42 testes: 31 passaram e 11 não iniciaram por DockerUnavailableException**. Em 28/10/2026, a equipe enviou o resumo da nova execução no clone com Docker: **42 testes, 42 aprovados, 0 falhas, 0 ignorados, duração de 108,7 s**; o build concluiu em 112,5 s. A auditoria conferiu esse resumo fornecido pela equipe, sem executar a suíte nesse mesmo terminal.
 - Subconjunto sem Docker: **31/31 aprovados**. Coverlet mediu somente OficinaMecanicaFase1.Domain: **459/498 linhas (92,16%)** e **388/458 ramos (84,71%)**. Por área: Cadastros 56/58 (96,55%); Catálogo 16/17 (94,12%); Estoque 99/108 (91,67%); Orçamentos 73/82 (89,02%); Ordens de serviço 215/233 (92,27%). O XML auditado está em docs/cobertura-auditoria.cobertura.xml.
-- A exportação limpa de 146 arquivos, sem .env, User Secrets, bin/obj nem TestResults, concluiu restore, build e 31 testes de domínio. O Dockerfile e a inicialização via Compose não foram executados porque o mecanismo Docker Linux permaneceu inacessível. docker compose config --quiet passou com variáveis temporárias.
+- A exportação limpa de 146 arquivos, sem .env, User Secrets, bin/obj nem TestResults, concluiu restore, build e 31 testes de domínio na execução auditada. A equipe posteriormente construiu a imagem e iniciou o Compose no clone de validação; o resumo dos 42 testes completos foi enviado pela equipe após a execução.
 - Os testes de integração instanciam MsSqlBuilder/Testcontainers por teste, com banco de nome único e descarte por await using. Não usam SQL Server local, porta fixa, User Secrets, dados existentes nem caminhos da usuária. Essa independência foi inspecionada no código; sua execução limpa segue não verificável.
 
 ## Documentação DDD
@@ -87,11 +87,11 @@ Os cinco diagramas Excalidraw do projeto são idênticos por SHA-256 aos origina
 
 ## PDF de entrega
 
-Caminho no projeto: docs/entrega-fase-1.pdf. **Uma página A4**, renderizada e conferida visualmente. Contém grupo, dois participantes com RMs/Discord, link do repositório, link público do GitHub Pages para a documentação, análise atualizada de vulnerabilidades, resultados dos testes e pendências. O link do repositório respondeu HTTP 200 sem login; o índice e 14 links DDD responderam HTTP 200 sem aviso intermediário. O PDF ainda exige atualização após os testes e scans pendentes e confirmação do envio ao remoto.
+Caminho no projeto: docs/entrega-fase-1.pdf. **Uma página A4**, renderizada e conferida visualmente. Contém grupo, dois participantes com RMs/Discord, link do repositório, link público do GitHub Pages para a documentação, análise atualizada de vulnerabilidades, resultados dos testes e pendências. O link do repositório respondeu HTTP 200 sem login; o índice e 14 links DDD responderam HTTP 200 sem aviso intermediário. O PDF reflete os scans concluídos e o resumo enviado dos 42 testes; ainda depende da validação manual da API e da confirmação do envio ao remoto.
 
 ## Vulnerabilidades, segredos e histórico
 
-Em 27/10/2026, dotnet list da solução com --vulnerable --include-transitive --no-restore --format json terminou com código 0 e sem pacotes vulneráveis nos cinco projetos. Semgrep 1.182.1 foi instalado isoladamente e o scan foi tentado, mas o semgrep-core falhou em socketpair; não há resultado de achados. Docker Scout não foi executado porque o terminal recebeu acesso negado ao mecanismo Docker, embora o aplicativo mostrasse Engine running. dotnet format analyzers falhou por acesso negado ao named pipe. A busca heurística em arquivos rastreados e 439 objetos históricos não encontrou arquivos .env, chaves privadas ou User Secrets; achou placeholders antigos e caminhos locais, removidos da versão de trabalho. Nenhum valor sensível foi reproduzido neste relatório.
+Em 27/10/2026, dotnet list da solução com --vulnerable --include-transitive --no-restore --format json terminou com código 0 e sem pacotes vulneráveis nos cinco projetos. Em 28/10/2026, a execução em Docker terminou com sucesso: 101 arquivos rastreados pelo Git analisados, 83 regras executadas e 0 achados (0 bloqueantes). Nove arquivos compatíveis com .semgrepignore foram ignorados. O resultado vale apenas para os arquivos e regras efetivamente analisados; não prova ausência absoluta de falhas. Em 28/10/2026, o Trivy 0.76.1 analisou a imagem da API exportada como oficina-api.tar. Foram detectadas 26 vulnerabilidades em pacotes do Ubuntu 24.04: 21 médias e 5 baixas, nenhuma alta ou crítica. As três entradas de dependências .NET tiveram 0 achados. A saída enviada não informa versões corrigidas para esses 26 achados. Eles devem ser acompanhados; após atualizar a imagem base, é preciso reconstruir a API e repetir o scan. Docker Scout solicitou login, mas o Trivy produziu um resultado válido sem login. dotnet format analyzers falhou por acesso negado ao named pipe. A busca heurística em arquivos rastreados e 439 objetos históricos não encontrou arquivos .env, chaves privadas ou User Secrets; achou placeholders antigos e caminhos locais, removidos da versão de trabalho. Nenhum valor sensível foi reproduzido neste relatório.
 
 ## Alterações realizadas
 
@@ -103,9 +103,10 @@ Em 27/10/2026, dotnet list da solução com --vulnerable --include-transitive --
 ## Pendências para entrega
 
 1. GitHub Pages está ativo em `main/docs` e o PDF já contém sua URL. Enviar a documentação revisada ao remoto e retestar o índice, os dois Event Stormings, demais diagramas e linguagem como visitante.
-2. Com Docker Linux acessível, executar em clone limpo docker build, docker compose up, migrations/bootstrap, saúde, Swagger, login e fluxos HTTP; rodar os 11 testes de integração e repetir a cobertura. Não tocar em volumes existentes.
-3. Reexecutar Semgrep e scan de CVEs da imagem, analisar achados e atualizar relatório/PDF. Repetir dotnet format analyzers em ambiente que permita seu processo auxiliar.
+2. Guardar o resumo dos 42 testes aprovados como evidência; validar saúde, Swagger, login e fluxos HTTP no clone. Repetir a cobertura com a suíte completa se desejar comprovar a medição nesse ambiente.
+3. Acompanhar os 26 achados da imagem e repetir Trivy após atualização da base. Repetir dotnet format analyzers em ambiente que permita seu processo auxiliar.
 4. Enviar o commit local desta auditoria ao remoto e verificar o SHA publicado. O push pelo Git CLI falhou porque o Git Credential Manager não iniciou no ambiente; o Visual Studio estava minimizado e indisponível ao controle de interface. Após o push, reconfirmar que o repositório público e o GitHub Pages abrem sem login.
 5. Gravar e disponibilizar o vídeo de até 15 minutos, com duração e acesso verificados.
 
 **Conclusão:** ainda há pendências além do vídeo; a entrega não está pronta.
+
