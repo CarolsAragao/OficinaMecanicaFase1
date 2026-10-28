@@ -2,7 +2,7 @@
 
 Este diretório é a raiz do **repositório do back-end** da oficina mecânica. A documentação DDD usada na implementação também está publicada em [`docs/ddd`](docs/ddd), com índice de navegação em [`docs/index.html`](docs/index.html).
 
-**Grupo:** Torque & Domínio — Tech Challenge. A [documentação DDD](docs/index.html), o [relatório de vulnerabilidades](docs/relatorio-vulnerabilidades.md) e o [roteiro da demonstração](docs/roteiro-video.md) compõem a entrega da Fase 1.
+**Grupo:** Torque & Domínio — Tech Challenge. A [documentação DDD](docs/index.html) e o [relatório de vulnerabilidades](docs/relatorio-vulnerabilidades.md) compõem a entrega da Fase 1.
 
 ## Estrutura
 
@@ -312,9 +312,7 @@ pode permanecer **público**. A consulta anônima retornou HTTP 200 em 27/10/202
 o que permite a `soat-architecture` ler o código sem convite. A pasta `docs`
 já contém `index.html` e pode ser publicada pelo GitHub Pages do próprio
 repositório, selecionando `main` e `/docs` em Settings > Pages. O Pages foi publicado em 27/10/2026 em
-`https://carolsaragao.github.io/OficinaMecanicaFase1/`: o índice e os 14 links
-DDD responderam HTTP 200. Após enviar as alterações locais ao remoto, valide
-novamente o site e use essa URL no PDF de entrega.
+`https://carolsaragao.github.io/OficinaMecanicaFase1/`: o índice público reúne os dois Event Stormings, os diagramas DDD e a linguagem ubíqua. Após atualizar a documentação, valide novamente o site como visitante.
 
 ## Referências
 
@@ -322,4 +320,3 @@ novamente o site e use essa URL no PDF de entrega.
 - [Instalar .NET no Windows](https://learn.microsoft.com/pt-br/dotnet/core/install/windows).
 - [SQL Server 2022 em contêiner](https://learn.microsoft.com/en-us/sql/linux/quickstart-install-connect-docker?view=sql-server-ver16).
 - [Convidar colaboradores em repositório pessoal](https://docs.github.com/pt/repositories/managing-your-repositorys-settings-and-features/repository-access-and-collaboration/inviting-collaborators-to-a-personal-repository).
-

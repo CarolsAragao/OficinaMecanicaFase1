@@ -1,0 +1,15 @@
+*{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#183039;font-family:Arial,system-ui,sans-serif}
+header{background:#143a40;color:white;padding:2.5rem max(1.5rem,calc((100vw - 1080px)/2))}
+header h1{margin:.25rem 0;font-size:2.1rem}header p{max-width:850px;line-height:1.5}
+main{max-width:1120px;margin:auto;padding:2rem 1.5rem 4rem}a{color:#086776}
+header a{color:#bff5ef}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:1rem}
+.card,figure,details,.intro{background:white;border:1px solid #d8e2e1;border-radius:10px;padding:1rem;margin:0 0 1rem}
+.card h2{font-size:1.17rem;margin:.1rem 0 .5rem}.card p{line-height:1.5;margin:.4rem 0}
+.card a{display:inline-block;margin-top:.5rem;font-weight:700}
+h2{margin-top:2rem}figure{overflow:hidden}figure img{display:block;width:100%;height:auto}
+figcaption{padding:.7rem .1rem .1rem;font-size:.92rem}details summary{cursor:pointer;font-weight:700;font-size:1.1rem}
+details[open]{padding-bottom:.2rem}details figure:first-of-type{margin-top:1rem}
+table{width:100%;border-collapse:collapse;background:white}th,td{padding:.7rem;border:1px solid #d8e2e1;text-align:left;vertical-align:top;line-height:1.4}
+th{background:#e5f2ef}footer{text-align:center;color:#607579;padding:1.5rem}
+.button{display:inline-block;background:#dcefeb;color:#07545d;padding:.65rem .85rem;border-radius:8px;font-weight:700}
+@media(max-width:650px){header h1{font-size:1.65rem}main{padding:1.2rem .9rem}table{font-size:.86rem}}
