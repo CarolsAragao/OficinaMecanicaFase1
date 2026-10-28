@@ -1,7 +1,3 @@
-using OficinaMecanicaFase1.Api.Contracts;
-using OficinaMecanicaFase1.Api.Cadastros;
-using OficinaMecanicaFase1.Api.Catalogo;
-using OficinaMecanicaFase1.Api.OrdensServico;
 using OficinaMecanicaFase1.Api.Security;
 using OficinaMecanicaFase1.Infrastructure.Identity;
 using OficinaMecanicaFase1.Infrastructure.Persistence;
@@ -17,6 +13,9 @@ builder.Services.AddProblemDetails(options =>
     options.CustomizeProblemDetails = context =>
         context.ProblemDetails.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
 });
+builder.Services.AddControllers(options =>
+        options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true)
+    .ConfigureApiBehaviorOptions(options => options.SuppressMapClientErrors = true);
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer(
     (documento, _, _) => EsquemaDeSegurancaOpenApi.AdicionarAsync(documento)));
 builder.Services.AddSqlServerPersistence(builder.Configuration);
@@ -127,25 +126,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Oficina Mecânica API v1"));
 }
 
-app.MapGet("/api/saude", () => TypedResults.Ok(new HealthResponse("operacional")))
-    .WithName("ConsultarSaude")
-    .WithTags("Sistema");
-
-app.MapGet("/api/saude/banco", async (OficinaDbContext db, CancellationToken cancellationToken) =>
-        await db.Database.CanConnectAsync(cancellationToken)
-            ? Results.Ok(new HealthResponse("operacional"))
-            : Results.Problem("Banco de dados indisponível", statusCode: 503))
-    .WithName("ConsultarSaudeBanco")
-    .WithTags("Sistema");
-
-app.MapearAcessoInterno();
-app.MapearCadastros();
-app.MapearCatalogoEstoque();
-app.MapearOrdensServico();
-app.MapearGestaoOrdensServico();
-app.MapearAvisosEstoque();
-app.MapearClienteOrcamento();
-app.MapearAditivos();
+app.MapControllers();
 
 app.Run();
 

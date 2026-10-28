@@ -25,6 +25,7 @@ public static class EsquemaDeSegurancaOpenApi
                   RotaDoGrupo(rota, "/api/servicos") ||
                   RotaDoGrupo(rota, "/api/itens-estoque") ||
                   RotaDoGrupo(rota, "/api/ordens-servico") ||
+                  RotaDoGrupo(rota, "/api/administracao/ordens-servico") ||
                   RotaDoGrupo(rota, "/api/avisos-estoque")))
             {
                 continue;

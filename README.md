@@ -18,6 +18,10 @@ Este diretório é a raiz do **repositório do back-end** da oficina mecânica. 
 
 Todos os projetos pertencem ao mesmo back-end monolítico. As referências seguem `Api → Application`, `Api → Infrastructure`, `Infrastructure → Application` e `Application → Domain`. Os contextos DDD são limites de linguagem e responsabilidade dentro do monólito.
 
+### Como a API HTTP está organizada
+
+Os endpoints ficam em classes na pasta `src/OficinaMecanicaFase1.Api/Controllers`, agrupadas por assunto e pelas etapas da ordem de serviço. Cada classe herda de `ControllerBase`: `[Route]` define o prefixo da URL, `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpPatch]` e `[HttpDelete]` indicam o método HTTP, e `[Authorize(Policy = "...")]` aplica a permissão necessária. O `Program.cs` registra os controllers com `AddControllers()` e `MapControllers()`. Os corpos JSON usam os contratos em `Api/Contracts` e as ações chamam os gerenciadores da camada Application; as regras do domínio não ficam nos controllers. Por exemplo, `ClientesController.CriarClienteAsync` atende `POST /api/clientes`, valida pelo caso de uso e retorna `201 Created` com o cliente cadastrado.
+
 ## Executar com Docker Compose
 
 Copie `.env.example` para `.env` e preencha `MSSQL_SA_PASSWORD` com uma senha forte e exclusiva. O template não contém senha pronta e `.env` está ignorado pelo Git. Em seguida, gere a chave JWT e informe, quando solicitado, o e-mail e uma senha própria para o primeiro administrador. Não use a senha do SQL Server como senha da conta. Use o PowerShell na raiz do projeto:

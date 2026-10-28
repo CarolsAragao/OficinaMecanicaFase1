@@ -23,10 +23,11 @@ O arquivo `coverage.runsettings` inclui apenas o assembly
 `OficinaMecanicaFase1.Domain`; API, aplicação, infraestrutura, migrations,
 testes e código gerado ficam fora do denominador.
 
-A suíte completa tem **42 testes** após as adições. Onze testes de integração
-usam SQL Server iniciado pelo Testcontainers e foram bloqueados nesta máquina
-por `DockerUnavailableException` (mecanismo Docker indisponível). Portanto,
-a medição acima comprova regras de domínio, mas **não comprova os fluxos HTTP
-e de persistência**. O resultado anterior de 22/10/2026 não é utilizado como
-evidência atual. Para validar integralmente, iniciar Docker Linux e executar
-a suíte completa, sem filtro, em um clone limpo.
+Na medição de 27/10, a suíte tinha **42 testes**. A migração da API para
+controllers acrescentou um teste de contrato HTTP, totalizando **43 testes**
+na branch `adicionando-controllers`. Nessa branch, os **32 testes sem Docker**
+passaram; os 11 de integração com SQL Server do Testcontainers precisam ser
+repetidos após a migração. Neste ambiente, o acesso ao pipe do Docker foi
+negado, então a execução integral terminou com `DockerUnavailableException`
+antes de testar esses fluxos. A cobertura acima continua sendo a medição das
+regras de domínio de 27/10 e não representa uma nova medição da branch.
