@@ -31,7 +31,7 @@ Copy-Item .env.example .env
 notepad .env
 powershell -ExecutionPolicy Bypass -File .\scripts\Configurar-Acesso-Interno.ps1
 docker compose config --quiet
-docker compose up --build -d
+docker compose up --build -d --wait
 docker compose ps
 Invoke-RestMethod http://localhost:5080/api/saude
 Invoke-RestMethod http://localhost:5080/api/saude/banco
@@ -48,12 +48,14 @@ gere uma chave com `openssl rand -base64 32` e preencha manualmente essas
 três variáveis e `MSSQL_SA_PASSWORD`. A chave deve ter 32 bytes aleatórios
 codificados em Base64; escolha senhas próprias e não versionadas. `openssl`
 é necessário apenas para gerar a chave por esse método. Para iniciar, use
-`docker compose up --build -d` e verifique a porta indicada por `API_PORT`
+`docker compose up --build -d --wait` e verifique a porta indicada por `API_PORT`
 em `/api/saude` e `/api/saude/banco`. `API_PORT` e `SQLSERVER_PORT` no
 `.env` permitem trocar as portas de host; não alteram as portas internas
 dos contêineres. Em sistemas sem PowerShell, as demais operações opcionais
 dos scripts podem ser feitas pelas rotas HTTP documentadas ou por um
 PowerShell instalado separadamente.
+
+O healthcheck do SQL Server só marca o serviço como saudável quando o banco `OficinaMecanica`, caso já exista no volume, estiver `ONLINE`. Após reiniciar o Docker, aguarde o comando com `--wait` terminar antes de iniciar a API no Visual Studio; não crie nem apague o banco manualmente para resolver uma falha transitória de recuperação.
 
 ## Depurar a API pelo Visual Studio
 
@@ -63,7 +65,7 @@ Na raiz do repositório, execute o primeiro script para salvar a conexão nos Us
 powershell -ExecutionPolicy Bypass -File .\scripts\Configurar-Depuracao-Local.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\Configurar-Acesso-Interno.ps1
 docker compose stop api
-docker compose up -d sqlserver
+docker compose up -d --wait sqlserver
 docker compose ps
 ```
 
