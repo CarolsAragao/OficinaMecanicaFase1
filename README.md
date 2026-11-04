@@ -319,10 +319,3 @@ o que permite a `soat-architecture` ler o código sem convite. A pasta `docs`
 já contém `index.html` e pode ser publicada pelo GitHub Pages do próprio
 repositório, selecionando `main` e `/docs` em Settings > Pages. O Pages foi publicado em 27/10/2026 em
 `https://carolsaragao.github.io/OficinaMecanicaFase1/`: o índice público reúne os dois Event Stormings, os diagramas DDD e a linguagem ubíqua. Após atualizar a documentação, valide novamente o site como visitante.
-
-## Referências
-
-- PDF oficial **SOAT — Fase 1 — Tech Challenge**: objetivos e requisitos técnicos da aplicação.
-- [Instalar .NET no Windows](https://learn.microsoft.com/pt-br/dotnet/core/install/windows).
-- [SQL Server 2022 em contêiner](https://learn.microsoft.com/en-us/sql/linux/quickstart-install-connect-docker?view=sql-server-ver16).
-- [Convidar colaboradores em repositório pessoal](https://docs.github.com/pt/repositories/managing-your-repositorys-settings-and-features/repository-access-and-collaboration/inviting-collaborators-to-a-personal-repository).
