@@ -12,11 +12,11 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [Authorize(Policy = "Cadastros")]
 public sealed class VeiculosController : OficinaControllerBase
 {
-    private readonly GerenciadorCadastros _gerenciadorCadastros;
+    private readonly CadastroService _cadastroService;
 
-    public VeiculosController(GerenciadorCadastros gerenciadorCadastros)
+    public VeiculosController(CadastroService cadastroService)
     {
-        _gerenciadorCadastros = gerenciadorCadastros;
+        _cadastroService = cadastroService;
     }
 
     [HttpGet("", Name = "ListarVeiculos")]
@@ -25,7 +25,7 @@ public sealed class VeiculosController : OficinaControllerBase
     [ProducesResponseType(401)]
     [ProducesResponseType(403)]
     public async Task<IActionResult> ListarVeiculosAsync([FromQuery] Guid? clienteId, CancellationToken cancelamento) =>
-        Ok((await _gerenciadorCadastros.ListarVeiculosAsync(clienteId, cancelamento))
+        Ok((await _cadastroService.ListarVeiculosAsync(clienteId, cancelamento))
             .Select(VeiculoResponse.De).ToArray());
 
     [HttpGet("{id:guid}", Name = "ObterVeiculo")]
@@ -35,7 +35,7 @@ public sealed class VeiculosController : OficinaControllerBase
     [ProducesResponseType(403)]
     public async Task<IActionResult> ObterVeiculoAsync([FromRoute] Guid id, CancellationToken cancelamento)
     {
-        var veiculo = await _gerenciadorCadastros.ObterVeiculoAsync(id, cancelamento);
+        var veiculo = await _cadastroService.ObterVeiculoAsync(id, cancelamento);
         return veiculo is null ? NotFound() : Ok(VeiculoResponse.De(veiculo));
     }
 
@@ -48,7 +48,7 @@ public sealed class VeiculosController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> CriarVeiculoAsync([FromBody] CriarVeiculoRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCadastros.CriarVeiculoAsync(
+        var resultado = await _cadastroService.CriarVeiculoAsync(
             entrada.ClienteId, entrada.Placa, entrada.Marca, entrada.Modelo, entrada.Ano, cancelamento);
         return resultado.Erro == ErroCadastro.Nenhum
             ? Created($"/api/veiculos/{resultado.Valor!.Id}", VeiculoResponse.De(resultado.Valor))
@@ -65,7 +65,7 @@ public sealed class VeiculosController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> AtualizarVeiculoAsync([FromRoute] Guid id, [FromBody] AtualizarVeiculoRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCadastros.AtualizarVeiculoAsync(
+        var resultado = await _cadastroService.AtualizarVeiculoAsync(
             id, entrada.Placa, entrada.Marca, entrada.Modelo, entrada.Ano, cancelamento);
         return resultado.Erro == ErroCadastro.Nenhum
             ? Ok(VeiculoResponse.De(resultado.Valor!))
@@ -81,7 +81,7 @@ public sealed class VeiculosController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> RemoverVeiculoAsync([FromRoute] Guid id, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCadastros.RemoverVeiculoAsync(id, cancelamento);
+        var resultado = await _cadastroService.RemoverVeiculoAsync(id, cancelamento);
         return resultado.Erro == ErroCadastro.Nenhum ? NoContent() : ResponderErro(resultado);
     }
 

@@ -5,7 +5,7 @@ using OficinaMecanicaFase1.Domain.Orcamentos;
 
 namespace OficinaMecanicaFase1.Application.OrdensServico;
 
-public interface IRepositorioOrdensServico
+public interface IOrdemServicoRepository
 {
     Task<bool> VeiculoPertenceAoClienteAsync(Guid clienteId, Guid veiculoId, CancellationToken cancelamento);
     Task<IReadOnlyDictionary<Guid, ServicoCatalogo>> ObterServicosAtivosAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancelamento);

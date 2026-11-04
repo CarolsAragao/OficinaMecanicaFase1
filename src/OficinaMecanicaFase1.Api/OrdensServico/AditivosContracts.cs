@@ -1,5 +1,4 @@
 using OficinaMecanicaFase1.Domain.Orcamentos;
-using OficinaMecanicaFase1.Infrastructure.Persistence;
 
 namespace OficinaMecanicaFase1.Api.OrdensServico;
 

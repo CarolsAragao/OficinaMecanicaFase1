@@ -2,7 +2,7 @@ using OficinaMecanicaFase1.Domain.Cadastros;
 
 namespace OficinaMecanicaFase1.Application.Cadastros;
 
-public sealed class GerenciadorCadastros(IRepositorioCadastros repositorio)
+public sealed class CadastroService(ICadastroRepository repositorio)
 {
     public async Task<ResultadoCadastro<IReadOnlyList<Cliente>>> ListarClientesAsync(
         string? documento, CancellationToken cancelamento)

@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using OficinaMecanicaFase1.Api.OrdensServico;
 using OficinaMecanicaFase1.Application.OrdensServico;
 using OficinaMecanicaFase1.Domain.Orcamentos;
-using OficinaMecanicaFase1.Infrastructure.Persistence;
 using System.Security.Claims;
 
 namespace OficinaMecanicaFase1.Api.Controllers;
@@ -15,11 +14,11 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [Authorize(Policy = "EquipeInterna")]
 public sealed class AditivosController : OficinaControllerBase
 {
-    private readonly GerenciadorAditivos _gerenciadorAditivos;
+    private readonly AditivoService _aditivoService;
 
-    public AditivosController(GerenciadorAditivos gerenciadorAditivos)
+    public AditivosController(AditivoService aditivoService)
     {
-        _gerenciadorAditivos = gerenciadorAditivos;
+        _aditivoService = aditivoService;
     }
 
     [HttpPost("")]
@@ -32,7 +31,7 @@ public sealed class AditivosController : OficinaControllerBase
     public async Task<IActionResult> CriarAsync([FromRoute] long numero, [FromBody] CriarAditivoRequest entrada, CancellationToken ct)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var mecanicoId)) return Forbid();
-        var resultado = await _gerenciadorAditivos.CriarAsync(numero, mecanicoId, entrada.Tipo, entrada.Descricao,
+        var resultado = await _aditivoService.CriarAsync(numero, mecanicoId, entrada.Tipo, entrada.Descricao,
             entrada.ServicoCatalogoId, entrada.ItemEstoqueId, entrada.Quantidade,
             entrada.OriginalPodeProsseguir, ct);
         return resultado.Erro == ErroOrdemServico.Nenhum
@@ -45,7 +44,7 @@ public sealed class AditivosController : OficinaControllerBase
     [ProducesResponseType(404)]
     public async Task<IActionResult> ObterInternoAsync([FromRoute] long numero, [FromRoute] Guid aditivoId, CancellationToken ct)
     {
-        var aditivo = await _gerenciadorAditivos.ConsultarInternoAsync(numero, aditivoId, ct);
+        var aditivo = await _aditivoService.ConsultarInternoAsync(numero, aditivoId, ct);
         return aditivo is null ? NotFound() : Ok(AditivoResponse.De(aditivo, numero));
     }
 
@@ -55,7 +54,7 @@ public sealed class AditivosController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> TentarReservaAsync([FromRoute] long numero, [FromRoute] Guid aditivoId, CancellationToken ct)
     {
-        var resultado = await _gerenciadorAditivos.TentarReservaAsync(numero, aditivoId, ct);
+        var resultado = await _aditivoService.TentarReservaAsync(numero, aditivoId, ct);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(AditivoResponse.De(resultado.Valor!, numero)) : Erro(resultado);
     }

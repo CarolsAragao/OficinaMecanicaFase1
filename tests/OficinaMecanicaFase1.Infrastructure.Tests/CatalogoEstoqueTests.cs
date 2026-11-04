@@ -172,7 +172,7 @@ public sealed class CatalogoEstoqueTests
             var db = escopo.ServiceProvider.GetRequiredService<OficinaDbContext>();
             Assert.Equal(conexao.InitialCatalog, db.Database.GetDbConnection().Database);
             Assert.False(db.Database.HasPendingModelChanges());
-            var catalogo = escopo.ServiceProvider.GetRequiredService<GerenciadorCatalogo>();
+            var catalogo = escopo.ServiceProvider.GetRequiredService<CatalogoService>();
             Assert.Null(await catalogo.ObterServicoAtivoAsync(servico.Id, default));
             Assert.Null(await catalogo.ObterItemAtivoAsync(peca.Id, default));
             await Assert.ThrowsAsync<SqlException>(() => db.Database.ExecuteSqlInterpolatedAsync(

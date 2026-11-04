@@ -12,7 +12,7 @@ public sealed class IndicadorTempoMedioTests
         var freio = Guid.NewGuid();
         var revisao = Guid.NewGuid();
         var inicio = new DateTimeOffset(2026, 10, 22, 12, 0, 0, TimeSpan.Zero);
-        var consulta = new ConsultaGestaoOrdensServico(new RepositorioEmMemoria(
+        var consulta = new GestaoOrdemServicoService(new RepositorioEmMemoria(
         [
             new(freio, "Freio", inicio, inicio.AddSeconds(10)),
             new(freio, "Freio", inicio, inicio.AddSeconds(20)),
@@ -34,7 +34,7 @@ public sealed class IndicadorTempoMedioTests
     [Fact]
     public async Task SemServicosConcluidosRetornaMediaNula()
     {
-        var consulta = new ConsultaGestaoOrdensServico(new RepositorioEmMemoria([]));
+        var consulta = new GestaoOrdemServicoService(new RepositorioEmMemoria([]));
 
         var indicador = await consulta.ObterIndicadorAsync(CancellationToken.None);
 
@@ -44,7 +44,7 @@ public sealed class IndicadorTempoMedioTests
     }
 
     private sealed class RepositorioEmMemoria(IReadOnlyList<TempoServicoConcluido> tempos)
-        : IConsultaGestaoOrdensServico
+        : IConsultaGestaoOrdemServicoRepository
     {
         public Task<PaginaOrdensServico> ListarAsync(StatusOrdemServico? status,
             int pagina, int tamanhoPagina, CancellationToken cancelamento) =>

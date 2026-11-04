@@ -1,9 +1,11 @@
+using OficinaMecanicaFase1.Application.Cadastros;
+using OficinaMecanicaFase1.Application.Catalogo;
+using OficinaMecanicaFase1.Application.OrdensServico;
 using OficinaMecanicaFase1.Api.Security;
 using OficinaMecanicaFase1.Infrastructure.Identity;
 using OficinaMecanicaFase1.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,11 +21,21 @@ builder.Services.AddControllers(options =>
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer(
     (documento, _, _) => EsquemaDeSegurancaOpenApi.AdicionarAsync(documento)));
 builder.Services.AddSqlServerPersistence(builder.Configuration);
+builder.Services.AddScoped<CadastroService>();
+builder.Services.AddScoped<CatalogoService>();
+builder.Services.AddScoped<OrdemServicoService>();
+builder.Services.AddScoped<GestaoOrdemServicoService>();
+builder.Services.AddScoped<DecisaoOrcamentoService>();
+builder.Services.AddScoped<ReservaEstoqueService>();
+builder.Services.AddScoped<ITentativaReservaEstoque>(services => services.GetRequiredService<ReservaEstoqueService>());
+builder.Services.AddScoped<ExecucaoOrdemServicoService>();
+builder.Services.AddScoped<AditivoService>();
 
 var jwt = ConfiguracaoJwt.Ler(builder.Configuration);
 builder.Services.AddSingleton(jwt);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<EmissorJwt>();
+builder.Services.AddScoped<AcessoInterno>();
 
 builder.Services.AddIdentityCore<UsuarioInterno>(options =>
     {
@@ -75,45 +87,8 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("Administradores", policy => policy.RequireAuthenticatedUser().RequireRole(PapeisInternos.Administrador));
 
 var app = builder.Build();
-var modoRedefinicaoAdministrador = string.Equals(
-    Environment.GetEnvironmentVariable("OFICINA_REDEFINIR_ADMIN"), "1", StringComparison.Ordinal);
-var modoLimpezaUsuariosTeste = string.Equals(
-    Environment.GetEnvironmentVariable("OFICINA_LIMPAR_USUARIOS_TESTE"), "1", StringComparison.Ordinal);
-var modoManutencaoIdentidade = modoRedefinicaoAdministrador || modoLimpezaUsuariosTeste;
-
-try
-{
-    await using (var scope = app.Services.CreateAsyncScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<OficinaDbContext>();
-        await db.Database.MigrateAsync();
-        var identidade = scope.ServiceProvider.GetRequiredService<IdentidadeDbContext>();
-        await identidade.Database.MigrateAsync();
-        await InicializadorIdentidade.InicializarAsync(scope.ServiceProvider, app.Configuration);
-    }
-
-    if (modoLimpezaUsuariosTeste)
-    {
-        await using var scope = app.Services.CreateAsyncScope();
-        await LimpezaUsuariosTeste.ExecutarAsync(scope.ServiceProvider);
-        await InicializadorIdentidade.InicializarAsync(scope.ServiceProvider, app.Configuration);
-        await RedefinidorSenhaAdministrador.ExecutarAsync(scope.ServiceProvider);
-        return;
-    }
-
-    if (modoRedefinicaoAdministrador)
-    {
-        await using var scope = app.Services.CreateAsyncScope();
-        await RedefinidorSenhaAdministrador.ExecutarAsync(scope.ServiceProvider);
-        return;
-    }
-}
-catch (Exception exception) when (modoManutencaoIdentidade)
-{
-    Console.Error.WriteLine("Falha ao preparar o banco ou redefinir a senha: " + exception.GetBaseException().Message);
-    Environment.ExitCode = 1;
+if (!await InicializacaoAplicacao.DeveIniciarServidorAsync(app))
     return;
-}
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

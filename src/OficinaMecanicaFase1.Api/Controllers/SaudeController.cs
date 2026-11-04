@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using OficinaMecanicaFase1.Api.Contracts;
-using OficinaMecanicaFase1.Infrastructure.Persistence;
+using OficinaMecanicaFase1.Application.Sistema;
 
 namespace OficinaMecanicaFase1.Api.Controllers;
 
@@ -20,9 +19,9 @@ public sealed class SaudeController : OficinaControllerBase
     [HttpGet("banco", Name = "ConsultarSaudeBanco")]
     [ProducesResponseType(typeof(HealthResponse), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 503)]
-    public async Task<IActionResult> ConsultarBancoAsync([FromServices] OficinaDbContext db,
+    public async Task<IActionResult> ConsultarBancoAsync([FromServices] IConsultaSaudeBanco consulta,
         CancellationToken cancellationToken) =>
-        await db.Database.CanConnectAsync(cancellationToken)
+        await consulta.PodeConectarAsync(cancellationToken)
             ? Ok(new HealthResponse("operacional"))
             : Problem("Banco de dados indisponível", statusCode: 503);
 }

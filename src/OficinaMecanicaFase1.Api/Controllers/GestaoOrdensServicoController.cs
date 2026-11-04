@@ -13,13 +13,13 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [Authorize(Policy = "Administradores")]
 public sealed class GestaoOrdensServicoController : OficinaControllerBase
 {
-    private readonly ConsultaGestaoOrdensServico _consultaGestaoOrdensServico;
-    private readonly GerenciadorOrdensServico _gerenciadorOrdensServico;
+    private readonly GestaoOrdemServicoService _consultaGestaoOrdensServico;
+    private readonly OrdemServicoService _ordemServicoService;
 
-    public GestaoOrdensServicoController(ConsultaGestaoOrdensServico consultaGestaoOrdensServico, GerenciadorOrdensServico gerenciadorOrdensServico)
+    public GestaoOrdensServicoController(GestaoOrdemServicoService consultaGestaoOrdensServico, OrdemServicoService ordemServicoService)
     {
         _consultaGestaoOrdensServico = consultaGestaoOrdensServico;
-        _gerenciadorOrdensServico = gerenciadorOrdensServico;
+        _ordemServicoService = ordemServicoService;
     }
 
     [HttpGet("", Name = "ListarOrdensServicoAdministrativas")]
@@ -69,7 +69,7 @@ public sealed class GestaoOrdensServicoController : OficinaControllerBase
     [ProducesResponseType(403)]
     public async Task<IActionResult> ObterAsync([FromRoute] long numero, CancellationToken cancelamento)
     {
-        var ordem = await _gerenciadorOrdensServico.ObterAsync(numero, cancelamento);
+        var ordem = await _ordemServicoService.ObterAsync(numero, cancelamento);
         return ordem is null ? NotFound() : Ok(OrdemServicoResponse.De(ordem));
     }
 }

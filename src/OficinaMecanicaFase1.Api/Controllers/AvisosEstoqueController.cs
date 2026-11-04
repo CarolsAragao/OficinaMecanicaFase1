@@ -9,7 +9,7 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [Route("api/avisos-estoque")]
 [Tags("Avisos de estoque")]
 [Authorize(Policy = "Estoquistas")]
-public sealed class AvisosEstoqueController(GerenciadorReservas reservas) : OficinaControllerBase
+public sealed class AvisosEstoqueController(ReservaEstoqueService reservas) : OficinaControllerBase
 {
     [HttpGet("reservas", Name = "ListarAvisosReservaEstoque")]
     [EndpointSummary("Estoquista consulta recusas de reserva pendentes ou o histórico de avisos.")]

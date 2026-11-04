@@ -5,14 +5,13 @@ using OficinaMecanicaFase1.Domain.Cadastros;
 
 namespace OficinaMecanicaFase1.Application.OrdensServico;
 
-public sealed class GerenciadorOrdensServico(
-    IRepositorioOrdensServico repositorio, TimeProvider tempo)
+public sealed class OrdemServicoService(
+    IOrdemServicoRepository repositorio, TimeProvider tempo)
 {
     public async Task<ResultadoOrdemServico<OrdemServico>> CriarAsync(
-        Guid clienteId, Guid veiculoId, IReadOnlyCollection<Guid> servicosIds,
-        IReadOnlyCollection<(Guid ItemEstoqueId, decimal Quantidade)> itens,
-        CancellationToken cancelamento)
+        AbrirOrdemServicoEntrada entrada, CancellationToken cancelamento)
     {
+        var (clienteId, veiculoId, servicosIds, itens) = entrada;
         if (clienteId == Guid.Empty || veiculoId == Guid.Empty)
             return Invalido<OrdemServico>("Informe cliente e veículo.", "clienteId");
         if (!await repositorio.VeiculoPertenceAoClienteAsync(clienteId, veiculoId, cancelamento))

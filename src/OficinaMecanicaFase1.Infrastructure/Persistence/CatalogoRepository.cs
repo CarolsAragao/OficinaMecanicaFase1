@@ -7,7 +7,7 @@ using OficinaMecanicaFase1.Domain.Estoque;
 
 namespace OficinaMecanicaFase1.Infrastructure.Persistence;
 
-public sealed class RepositorioCatalogo(OficinaDbContext db) : IRepositorioCatalogo
+public sealed class CatalogoRepository(OficinaDbContext db) : ICatalogoRepository
 {
     public async Task<IReadOnlyList<ServicoCatalogo>> ListarServicosAsync(bool somenteAtivos, CancellationToken cancelamento) =>
         await db.ServicosCatalogo.AsNoTracking()

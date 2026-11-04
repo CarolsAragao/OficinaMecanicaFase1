@@ -127,7 +127,7 @@ public sealed class CadastrosTests
             var db = escopo.ServiceProvider.GetRequiredService<OficinaDbContext>();
             Assert.Equal(conexao.InitialCatalog, db.Database.GetDbConnection().Database);
             Assert.False(db.Database.HasPendingModelChanges());
-            var gerenciador = escopo.ServiceProvider.GetRequiredService<GerenciadorCadastros>();
+            var gerenciador = escopo.ServiceProvider.GetRequiredService<CadastroService>();
             Assert.True(await gerenciador.VeiculoPertenceAoClienteAsync(veiculo.Id, ana.Id, default));
             Assert.False(await gerenciador.VeiculoPertenceAoClienteAsync(veiculo.Id, oficina.Id, default));
         }

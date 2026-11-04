@@ -18,16 +18,7 @@ public sealed record MediaTempoServico(Guid ServicoCatalogoId, string NomeServic
 public sealed record IndicadorTempoMedio(int QuantidadeTotalConcluida,
     double? MediaGeralSegundos, IReadOnlyList<MediaTempoServico> Servicos);
 
-public interface IConsultaGestaoOrdensServico
-{
-    Task<PaginaOrdensServico> ListarAsync(StatusOrdemServico? status, int pagina,
-        int tamanhoPagina, CancellationToken cancelamento);
-
-    Task<IReadOnlyList<TempoServicoConcluido>> ObterTemposConcluidosAsync(
-        CancellationToken cancelamento);
-}
-
-public sealed class ConsultaGestaoOrdensServico(IConsultaGestaoOrdensServico repositorio)
+public sealed class GestaoOrdemServicoService(IConsultaGestaoOrdemServicoRepository repositorio)
 {
     public Task<PaginaOrdensServico> ListarAsync(StatusOrdemServico? status, int pagina,
         int tamanhoPagina, CancellationToken cancelamento) =>

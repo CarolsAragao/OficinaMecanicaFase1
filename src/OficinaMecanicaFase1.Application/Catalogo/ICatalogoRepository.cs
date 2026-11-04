@@ -3,7 +3,7 @@ using OficinaMecanicaFase1.Domain.Estoque;
 
 namespace OficinaMecanicaFase1.Application.Catalogo;
 
-public interface IRepositorioCatalogo
+public interface ICatalogoRepository
 {
     Task<IReadOnlyList<ServicoCatalogo>> ListarServicosAsync(bool somenteAtivos, CancellationToken cancelamento);
     Task<ServicoCatalogo?> ObterServicoAsync(Guid id, CancellationToken cancelamento);

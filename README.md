@@ -20,7 +20,7 @@ Todos os projetos pertencem ao mesmo back-end monolítico. As referências segue
 
 ### Como a API HTTP está organizada
 
-Os endpoints ficam em classes na pasta `src/OficinaMecanicaFase1.Api/Controllers`, agrupadas por assunto e pelas etapas da ordem de serviço. Cada classe herda de `ControllerBase`: `[Route]` define o prefixo da URL, `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpPatch]` e `[HttpDelete]` indicam o método HTTP, e `[Authorize(Policy = "...")]` aplica a permissão necessária. O `Program.cs` registra os controllers com `AddControllers()` e `MapControllers()`. Os corpos JSON usam os contratos em `Api/Contracts` e as ações chamam os gerenciadores da camada Application; as regras do domínio não ficam nos controllers. Por exemplo, `ClientesController.CriarClienteAsync` atende `POST /api/clientes`, valida pelo caso de uso e retorna `201 Created` com o cliente cadastrado.
+Os endpoints ficam em classes na pasta `src/OficinaMecanicaFase1.Api/Controllers`, agrupadas por assunto e pelas etapas da ordem de serviço. Cada classe herda de `ControllerBase`: `[Route]` define o prefixo da URL, `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpPatch]` e `[HttpDelete]` indicam o método HTTP, e `[Authorize(Policy = "...")]` aplica a permissão necessária. O `Program.cs` registra os controllers com `AddControllers()` e `MapControllers()`. Os corpos JSON usam os contratos em `Api/Contracts` e as ações chamam os serviços da camada Application; as regras do domínio não ficam nos controllers. Por exemplo, `ClientesController.CriarClienteAsync` atende `POST /api/clientes`, valida pelo caso de uso e retorna `201 Created` com o cliente cadastrado.
 
 ## Executar com Docker Compose
 
@@ -106,6 +106,15 @@ Substitua `SENHA_LOCAL` no terminal, sem salvar a senha no código ou em arquivo
 Com a aplicação em `http://localhost:5080`, confira `GET /api/saude/banco` para a conectividade com SQL Server. `GET /api/saude` confirma apenas o processo HTTP. `/openapi/v1.json` e `/swagger` ficam disponíveis em `Development`.
 
 ## Migrações e teste de persistência
+
+A variável de ambiente `Banco__Inicializacao` controla a preparação do banco e da identidade.
+
+| Valor | Comportamento |
+| --- | --- |
+| `Automatica` | Aplica as migrações e inicializa a identidade antes de iniciar a API. É o padrão do ambiente local. |
+| `SomentePreparar` | Aplica as migrações, inicializa a identidade e encerra o processo. Use em uma etapa única antes de subir as réplicas. |
+| `Externa` | Inicia a API com o banco já preparado. Use nas réplicas depois que a etapa de preparação terminar com sucesso. |
+
 
 O modelo EF Core inicial tem a tabela técnica `RegistrosPersistencia`, criada pela migration `CriarPersistenciaInicial`; ela permite verificar gravação e leitura sem antecipar as entidades do negócio. A migration está versionada em `src/OficinaMecanicaFase1.Infrastructure/Persistence/Migrations`. Para mudanças futuras no modelo, instale a ferramenta de migrations do EF Core 10 e gere uma nova migration apontando para o projeto de infraestrutura e o projeto de inicialização da API. Uma migration deve ser revisada antes de aplicar em outros ambientes.
 

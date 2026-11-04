@@ -5,7 +5,7 @@ using OficinaMecanicaFase1.Domain.Cadastros;
 
 namespace OficinaMecanicaFase1.Infrastructure.Persistence;
 
-public sealed class RepositorioCadastros(OficinaDbContext db) : IRepositorioCadastros
+public sealed class CadastroRepository(OficinaDbContext db) : ICadastroRepository
 {
     public async Task<IReadOnlyList<Cliente>> ListarClientesAsync(string? documento, CancellationToken cancelamento) =>
         await db.Clientes.AsNoTracking()

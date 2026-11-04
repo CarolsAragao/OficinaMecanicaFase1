@@ -13,11 +13,11 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [Authorize(Policy = "EquipeInterna")]
 public sealed class ServicosController : OficinaControllerBase
 {
-    private readonly GerenciadorCatalogo _gerenciadorCatalogo;
+    private readonly CatalogoService _catalogoService;
 
-    public ServicosController(GerenciadorCatalogo gerenciadorCatalogo)
+    public ServicosController(CatalogoService catalogoService)
     {
-        _gerenciadorCatalogo = gerenciadorCatalogo;
+        _catalogoService = catalogoService;
     }
 
     [HttpGet("", Name = "ListarServicosCatalogo")]
@@ -26,7 +26,7 @@ public sealed class ServicosController : OficinaControllerBase
     [ProducesResponseType(401)]
     [ProducesResponseType(403)]
     public async Task<IActionResult> ListarServicosAsync([FromQuery] bool? somenteAtivos, CancellationToken cancelamento) =>
-        Ok((await _gerenciadorCatalogo.ListarServicosAsync(somenteAtivos ?? false, cancelamento))
+        Ok((await _catalogoService.ListarServicosAsync(somenteAtivos ?? false, cancelamento))
             .Select(ServicoCatalogoResponse.De).ToArray());
 
     [HttpGet("{id:guid}", Name = "ObterServicoCatalogo")]
@@ -36,7 +36,7 @@ public sealed class ServicosController : OficinaControllerBase
     [ProducesResponseType(403)]
     public async Task<IActionResult> ObterServicoAsync([FromRoute] Guid id, CancellationToken cancelamento)
     {
-        var servico = await _gerenciadorCatalogo.ObterServicoAsync(id, cancelamento);
+        var servico = await _catalogoService.ObterServicoAsync(id, cancelamento);
         return servico is null ? NotFound() : Ok(ServicoCatalogoResponse.De(servico));
     }
 
@@ -49,7 +49,7 @@ public sealed class ServicosController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> CriarServicoAsync([FromBody] ServicoCatalogoRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCatalogo.CriarServicoAsync(entrada.Nome, entrada.Descricao, entrada.PrecoBase, cancelamento);
+        var resultado = await _catalogoService.CriarServicoAsync(entrada.Nome, entrada.Descricao, entrada.PrecoBase, cancelamento);
         return resultado.Erro == ErroCatalogo.Nenhum
             ? Created($"/api/servicos/{resultado.Valor!.Id}", ServicoCatalogoResponse.De(resultado.Valor))
             : ResponderErro(resultado);
@@ -65,7 +65,7 @@ public sealed class ServicosController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> AtualizarServicoAsync([FromRoute] Guid id, [FromBody] ServicoCatalogoRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCatalogo.AtualizarServicoAsync(id, entrada.Nome, entrada.Descricao, entrada.PrecoBase, cancelamento);
+        var resultado = await _catalogoService.AtualizarServicoAsync(id, entrada.Nome, entrada.Descricao, entrada.PrecoBase, cancelamento);
         return resultado.Erro == ErroCatalogo.Nenhum
             ? Ok(ServicoCatalogoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
@@ -79,7 +79,7 @@ public sealed class ServicosController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> DefinirServicoAtivoAsync([FromRoute] Guid id, [FromBody] DefinirAtivacaoRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCatalogo.DefinirServicoAtivoAsync(id, entrada.Ativo, cancelamento);
+        var resultado = await _catalogoService.DefinirServicoAtivoAsync(id, entrada.Ativo, cancelamento);
         return resultado.Erro == ErroCatalogo.Nenhum
             ? Ok(ServicoCatalogoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
@@ -94,7 +94,7 @@ public sealed class ServicosController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> DesativarServicoAsync([FromRoute] Guid id, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCatalogo.DefinirServicoAtivoAsync(id, false, cancelamento);
+        var resultado = await _catalogoService.DefinirServicoAtivoAsync(id, false, cancelamento);
         return resultado.Erro == ErroCatalogo.Nenhum ? NoContent() : ResponderErro(resultado);
     }
 

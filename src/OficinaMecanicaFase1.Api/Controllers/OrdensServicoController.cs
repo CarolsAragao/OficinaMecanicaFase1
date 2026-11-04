@@ -13,11 +13,11 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [Authorize(Policy = "EquipeInterna")]
 public sealed class OrdensServicoController : OficinaControllerBase
 {
-    private readonly GerenciadorOrdensServico _gerenciadorOrdensServico;
+    private readonly OrdemServicoService _ordemServicoService;
 
-    public OrdensServicoController(GerenciadorOrdensServico gerenciadorOrdensServico)
+    public OrdensServicoController(OrdemServicoService ordemServicoService)
     {
-        _gerenciadorOrdensServico = gerenciadorOrdensServico;
+        _ordemServicoService = ordemServicoService;
     }
 
     [HttpPost("", Name = "AbrirOrdemServico")]
@@ -30,11 +30,11 @@ public sealed class OrdensServicoController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> CriarAsync([FromBody] CriarOrdemServicoRequest entrada, CancellationToken cancelamento)
     {
-        var servicos = entrada.ServicosIds ?? [];
-        var itens = entrada.ItensNecessarios ?? [];
-        var resultado = await _gerenciadorOrdensServico.CriarAsync(
-            entrada.ClienteId, entrada.VeiculoId, servicos,
-            itens.Select(item => (item.ItemEstoqueId, item.Quantidade)).ToArray(), cancelamento);
+        var comando = new AbrirOrdemServicoEntrada(
+            entrada.ClienteId, entrada.VeiculoId, entrada.ServicosIds ?? [],
+            (entrada.ItensNecessarios ?? [])
+                .Select(item => new ItemAberturaOrdemServico(item.ItemEstoqueId, item.Quantidade)).ToArray());
+        var resultado = await _ordemServicoService.CriarAsync(comando, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Created($"/api/ordens-servico/{resultado.Valor!.Numero}", OrdemServicoResponse.De(resultado.Valor))
             : ResponderErro(resultado);
@@ -47,7 +47,7 @@ public sealed class OrdensServicoController : OficinaControllerBase
     [ProducesResponseType(403)]
     public async Task<IActionResult> ObterAsync([FromRoute] long numero, CancellationToken cancelamento)
     {
-        var ordem = await _gerenciadorOrdensServico.ObterAsync(numero, cancelamento);
+        var ordem = await _ordemServicoService.ObterAsync(numero, cancelamento);
         return ordem is null ? NotFound() : Ok(OrdemServicoResponse.De(ordem));
     }
 
@@ -63,7 +63,7 @@ public sealed class OrdensServicoController : OficinaControllerBase
     public async Task<IActionResult> EntregarAsync([FromRoute] long numero, CancellationToken cancelamento)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var atendenteId)) return Forbid();
-        var resultado = await _gerenciadorOrdensServico.EntregarAsync(numero, atendenteId, cancelamento);
+        var resultado = await _ordemServicoService.EntregarAsync(numero, atendenteId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
@@ -79,7 +79,7 @@ public sealed class OrdensServicoController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> AdicionarServicoAsync([FromRoute] long numero, [FromBody] AdicionarServicoSolicitadoRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorOrdensServico.AdicionarServicoAsync(numero, entrada.ServicoCatalogoId, cancelamento);
+        var resultado = await _ordemServicoService.AdicionarServicoAsync(numero, entrada.ServicoCatalogoId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
@@ -95,7 +95,7 @@ public sealed class OrdensServicoController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> AdicionarItemAsync([FromRoute] long numero, [FromBody] AdicionarItemNecessarioRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorOrdensServico.AdicionarItemAsync(
+        var resultado = await _ordemServicoService.AdicionarItemAsync(
             numero, entrada.ItemEstoqueId, entrada.Quantidade, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);

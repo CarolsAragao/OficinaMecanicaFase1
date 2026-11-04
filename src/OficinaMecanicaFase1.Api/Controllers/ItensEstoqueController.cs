@@ -13,11 +13,11 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [Authorize(Policy = "EquipeInterna")]
 public sealed class ItensEstoqueController : OficinaControllerBase
 {
-    private readonly GerenciadorCatalogo _gerenciadorCatalogo;
+    private readonly CatalogoService _catalogoService;
 
-    public ItensEstoqueController(GerenciadorCatalogo gerenciadorCatalogo)
+    public ItensEstoqueController(CatalogoService catalogoService)
     {
-        _gerenciadorCatalogo = gerenciadorCatalogo;
+        _catalogoService = catalogoService;
     }
 
     [HttpGet("", Name = "ListarItensEstoque")]
@@ -26,7 +26,7 @@ public sealed class ItensEstoqueController : OficinaControllerBase
     [ProducesResponseType(401)]
     [ProducesResponseType(403)]
     public async Task<IActionResult> ListarItensAsync([FromQuery] bool? somenteAtivos, CancellationToken cancelamento) =>
-        Ok((await _gerenciadorCatalogo.ListarItensAsync(somenteAtivos ?? false, cancelamento))
+        Ok((await _catalogoService.ListarItensAsync(somenteAtivos ?? false, cancelamento))
             .Select(ItemEstoqueResponse.De).ToArray());
 
     [HttpGet("{id:guid}", Name = "ObterItemEstoque")]
@@ -36,7 +36,7 @@ public sealed class ItensEstoqueController : OficinaControllerBase
     [ProducesResponseType(403)]
     public async Task<IActionResult> ObterItemAsync([FromRoute] Guid id, CancellationToken cancelamento)
     {
-        var item = await _gerenciadorCatalogo.ObterItemAsync(id, cancelamento);
+        var item = await _catalogoService.ObterItemAsync(id, cancelamento);
         return item is null ? NotFound() : Ok(ItemEstoqueResponse.De(item));
     }
 
@@ -49,7 +49,7 @@ public sealed class ItensEstoqueController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> CriarItemAsync([FromBody] CriarItemEstoqueRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCatalogo.CriarItemAsync(entrada.Nome, entrada.Descricao, entrada.Tipo,
+        var resultado = await _catalogoService.CriarItemAsync(entrada.Nome, entrada.Descricao, entrada.Tipo,
             entrada.UnidadeMedida, entrada.PrecoUnitario, cancelamento);
         return resultado.Erro == ErroCatalogo.Nenhum
             ? Created($"/api/itens-estoque/{resultado.Valor!.Id}", ItemEstoqueResponse.De(resultado.Valor))
@@ -66,7 +66,7 @@ public sealed class ItensEstoqueController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> AtualizarItemAsync([FromRoute] Guid id, [FromBody] AtualizarItemEstoqueRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCatalogo.AtualizarItemAsync(id, entrada.Nome, entrada.Descricao,
+        var resultado = await _catalogoService.AtualizarItemAsync(id, entrada.Nome, entrada.Descricao,
             entrada.PrecoUnitario, cancelamento);
         return resultado.Erro == ErroCatalogo.Nenhum
             ? Ok(ItemEstoqueResponse.De(resultado.Valor!)) : ResponderErro(resultado);
@@ -81,7 +81,7 @@ public sealed class ItensEstoqueController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> DefinirItemAtivoAsync([FromRoute] Guid id, [FromBody] DefinirAtivacaoRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCatalogo.DefinirItemAtivoAsync(id, entrada.Ativo, cancelamento);
+        var resultado = await _catalogoService.DefinirItemAtivoAsync(id, entrada.Ativo, cancelamento);
         return resultado.Erro == ErroCatalogo.Nenhum
             ? Ok(ItemEstoqueResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
@@ -96,7 +96,7 @@ public sealed class ItensEstoqueController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> DesativarItemAsync([FromRoute] Guid id, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCatalogo.DefinirItemAtivoAsync(id, false, cancelamento);
+        var resultado = await _catalogoService.DefinirItemAtivoAsync(id, false, cancelamento);
         return resultado.Erro == ErroCatalogo.Nenhum ? NoContent() : ResponderErro(resultado);
     }
 
@@ -112,7 +112,7 @@ public sealed class ItensEstoqueController : OficinaControllerBase
     public async Task<IActionResult> RegistrarEntradaAsync([FromRoute] Guid id, [FromBody] RegistrarEntradaEstoqueRequest entrada, CancellationToken cancelamento)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var usuarioId)) return Forbid();
-        var resultado = await _gerenciadorCatalogo.RegistrarEntradaAsync(id, entrada.Quantidade, usuarioId, cancelamento);
+        var resultado = await _catalogoService.RegistrarEntradaAsync(id, entrada.Quantidade, usuarioId, cancelamento);
         return resultado.Erro == ErroCatalogo.Nenhum
             ? Created($"/api/itens-estoque/{id}/entradas", EntradaEstoqueResponse.De(resultado.Valor!))
             : ResponderErro(resultado);
@@ -125,8 +125,8 @@ public sealed class ItensEstoqueController : OficinaControllerBase
     [ProducesResponseType(403)]
     public async Task<IActionResult> ListarEntradasAsync([FromRoute] Guid id, CancellationToken cancelamento)
     {
-        if (await _gerenciadorCatalogo.ObterItemAsync(id, cancelamento) is null) return NotFound();
-        return Ok((await _gerenciadorCatalogo.ListarEntradasAsync(id, cancelamento))
+        if (await _catalogoService.ObterItemAsync(id, cancelamento) is null) return NotFound();
+        return Ok((await _catalogoService.ListarEntradasAsync(id, cancelamento))
             .Select(EntradaEstoqueResponse.De).ToArray());
     }
 

@@ -13,13 +13,13 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [Authorize(Policy = "EquipeInterna")]
 public sealed class DiagnosticoOrcamentoController : OficinaControllerBase
 {
-    private readonly GerenciadorOrdensServico _gerenciadorOrdensServico;
-    private readonly GerenciadorDecisaoOrcamento _gerenciadorDecisaoOrcamento;
+    private readonly OrdemServicoService _ordemServicoService;
+    private readonly DecisaoOrcamentoService _decisaoOrcamentoService;
 
-    public DiagnosticoOrcamentoController(GerenciadorOrdensServico gerenciadorOrdensServico, GerenciadorDecisaoOrcamento gerenciadorDecisaoOrcamento)
+    public DiagnosticoOrcamentoController(OrdemServicoService ordemServicoService, DecisaoOrcamentoService decisaoOrcamentoService)
     {
-        _gerenciadorOrdensServico = gerenciadorOrdensServico;
-        _gerenciadorDecisaoOrcamento = gerenciadorDecisaoOrcamento;
+        _ordemServicoService = ordemServicoService;
+        _decisaoOrcamentoService = decisaoOrcamentoService;
     }
 
     [HttpPost("{numero:long}/diagnostico/inicio", Name = "IniciarDiagnostico")]
@@ -34,7 +34,7 @@ public sealed class DiagnosticoOrcamentoController : OficinaControllerBase
     public async Task<IActionResult> IniciarDiagnosticoAsync([FromRoute] long numero, CancellationToken cancelamento)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var mecanicoId)) return Forbid();
-        var resultado = await _gerenciadorOrdensServico.IniciarDiagnosticoAsync(numero, mecanicoId, cancelamento);
+        var resultado = await _ordemServicoService.IniciarDiagnosticoAsync(numero, mecanicoId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
@@ -51,7 +51,7 @@ public sealed class DiagnosticoOrcamentoController : OficinaControllerBase
     public async Task<IActionResult> RegistrarDiagnosticoAsync([FromRoute] long numero, [FromBody] RegistrarDiagnosticoRequest entrada, CancellationToken cancelamento)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var mecanicoId)) return Forbid();
-        var resultado = await _gerenciadorOrdensServico.RegistrarDiagnosticoAsync(numero, mecanicoId, entrada.Descricao, cancelamento);
+        var resultado = await _ordemServicoService.RegistrarDiagnosticoAsync(numero, mecanicoId, entrada.Descricao, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
@@ -67,7 +67,7 @@ public sealed class DiagnosticoOrcamentoController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> GerarOrcamentoAsync([FromRoute] long numero, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorOrdensServico.GerarOrcamentoAsync(numero, cancelamento);
+        var resultado = await _ordemServicoService.GerarOrcamentoAsync(numero, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(OrcamentoResponse.De(resultado.Valor!, numero)) : ResponderErro(resultado);
     }
@@ -79,7 +79,7 @@ public sealed class DiagnosticoOrcamentoController : OficinaControllerBase
     [ProducesResponseType(403)]
     public async Task<IActionResult> ObterOrcamentoAsync([FromRoute] long numero, CancellationToken cancelamento)
     {
-        var orcamento = await _gerenciadorOrdensServico.ObterOrcamentoAsync(numero, cancelamento);
+        var orcamento = await _ordemServicoService.ObterOrcamentoAsync(numero, cancelamento);
         return orcamento is null ? NotFound() : Ok(OrcamentoResponse.De(orcamento, numero));
     }
 
@@ -96,7 +96,7 @@ public sealed class DiagnosticoOrcamentoController : OficinaControllerBase
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var atendenteId)) return Forbid();
         HttpContext.Response.Headers.CacheControl = "no-store";
-        var resultado = await _gerenciadorDecisaoOrcamento.EmitirCodigoAsync(numero, atendenteId, entrada.Motivo, cancelamento);
+        var resultado = await _decisaoOrcamentoService.EmitirCodigoAsync(numero, atendenteId, entrada.Motivo, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(new CodigoAcessoResponse(numero, resultado.Valor!.Codigo,
                 resultado.Valor.NumeroEmissao, resultado.Valor.EmitidoEmUtc))

@@ -9,7 +9,7 @@ using OficinaMecanicaFase1.Domain.Orcamentos;
 
 namespace OficinaMecanicaFase1.Infrastructure.Persistence;
 
-public sealed class RepositorioOrdensServico(OficinaDbContext db) : IRepositorioOrdensServico
+public sealed class OrdemServicoRepository(OficinaDbContext db) : IOrdemServicoRepository
 {
     public Task<bool> VeiculoPertenceAoClienteAsync(Guid clienteId, Guid veiculoId, CancellationToken cancelamento) =>
         db.Veiculos.AsNoTracking().AnyAsync(veiculo => veiculo.Id == veiculoId && veiculo.ClienteId == clienteId, cancelamento);

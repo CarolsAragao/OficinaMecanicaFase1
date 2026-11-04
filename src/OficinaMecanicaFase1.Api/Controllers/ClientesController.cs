@@ -12,11 +12,11 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [Authorize(Policy = "Cadastros")]
 public sealed class ClientesController : OficinaControllerBase
 {
-    private readonly GerenciadorCadastros _gerenciadorCadastros;
+    private readonly CadastroService _cadastroService;
 
-    public ClientesController(GerenciadorCadastros gerenciadorCadastros)
+    public ClientesController(CadastroService cadastroService)
     {
-        _gerenciadorCadastros = gerenciadorCadastros;
+        _cadastroService = cadastroService;
     }
 
     [HttpGet("", Name = "ListarClientes")]
@@ -27,7 +27,7 @@ public sealed class ClientesController : OficinaControllerBase
     [ProducesResponseType(typeof(ValidationProblemDetails), 400)]
     public async Task<IActionResult> ListarClientesAsync([FromQuery] string? documento, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCadastros.ListarClientesAsync(documento, cancelamento);
+        var resultado = await _cadastroService.ListarClientesAsync(documento, cancelamento);
         return resultado.Erro == ErroCadastro.Nenhum
             ? Ok(resultado.Valor!.Select(ClienteResponse.De).ToArray())
             : ResponderErro(resultado);
@@ -40,7 +40,7 @@ public sealed class ClientesController : OficinaControllerBase
     [ProducesResponseType(403)]
     public async Task<IActionResult> ObterClienteAsync([FromRoute] Guid id, CancellationToken cancelamento)
     {
-        var cliente = await _gerenciadorCadastros.ObterClienteAsync(id, cancelamento);
+        var cliente = await _cadastroService.ObterClienteAsync(id, cancelamento);
         return cliente is null ? NotFound() : Ok(ClienteResponse.De(cliente));
     }
 
@@ -52,7 +52,7 @@ public sealed class ClientesController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> CriarClienteAsync([FromBody] ClienteRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCadastros.CriarClienteAsync(entrada.Nome, entrada.Documento, cancelamento);
+        var resultado = await _cadastroService.CriarClienteAsync(entrada.Nome, entrada.Documento, cancelamento);
         return resultado.Erro == ErroCadastro.Nenhum
             ? Created($"/api/clientes/{resultado.Valor!.Id}", ClienteResponse.De(resultado.Valor))
             : ResponderErro(resultado);
@@ -67,7 +67,7 @@ public sealed class ClientesController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> AtualizarClienteAsync([FromRoute] Guid id, [FromBody] ClienteRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCadastros.AtualizarClienteAsync(id, entrada.Nome, entrada.Documento, cancelamento);
+        var resultado = await _cadastroService.AtualizarClienteAsync(id, entrada.Nome, entrada.Documento, cancelamento);
         return resultado.Erro == ErroCadastro.Nenhum
             ? Ok(ClienteResponse.De(resultado.Valor!))
             : ResponderErro(resultado);
@@ -82,7 +82,7 @@ public sealed class ClientesController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> RemoverClienteAsync([FromRoute] Guid id, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorCadastros.RemoverClienteAsync(id, cancelamento);
+        var resultado = await _cadastroService.RemoverClienteAsync(id, cancelamento);
         return resultado.Erro == ErroCadastro.Nenhum ? NoContent() : ResponderErro(resultado);
     }
 

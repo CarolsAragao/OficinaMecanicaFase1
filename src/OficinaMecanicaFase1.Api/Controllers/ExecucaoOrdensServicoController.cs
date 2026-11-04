@@ -13,13 +13,13 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [Authorize(Policy = "EquipeInterna")]
 public sealed class ExecucaoOrdensServicoController : OficinaControllerBase
 {
-    private readonly GerenciadorReservas _gerenciadorReservas;
-    private readonly GerenciadorExecucao _gerenciadorExecucao;
+    private readonly ReservaEstoqueService _reservaEstoqueService;
+    private readonly ExecucaoOrdemServicoService _execucaoOrdemServicoService;
 
-    public ExecucaoOrdensServicoController(GerenciadorReservas gerenciadorReservas, GerenciadorExecucao gerenciadorExecucao)
+    public ExecucaoOrdensServicoController(ReservaEstoqueService reservaEstoqueService, ExecucaoOrdemServicoService execucaoOrdemServicoService)
     {
-        _gerenciadorReservas = gerenciadorReservas;
-        _gerenciadorExecucao = gerenciadorExecucao;
+        _reservaEstoqueService = reservaEstoqueService;
+        _execucaoOrdemServicoService = execucaoOrdemServicoService;
     }
 
     [HttpPost("{numero:long}/reservas/tentativa", Name = "TentarReservaOrdemServico")]
@@ -32,7 +32,7 @@ public sealed class ExecucaoOrdensServicoController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> TentarReservaAsync([FromRoute] long numero, CancellationToken cancelamento)
     {
-        var resultado = await _gerenciadorReservas.TentarReservarAsync(numero, cancelamento);
+        var resultado = await _reservaEstoqueService.TentarReservarAsync(numero, cancelamento);
         return resultado.Situacao switch
         {
             SituacaoTentativaReserva.NaoEncontrada => NotFound(),
@@ -53,7 +53,7 @@ public sealed class ExecucaoOrdensServicoController : OficinaControllerBase
     public async Task<IActionResult> IniciarExecucaoAsync([FromRoute] long numero, CancellationToken cancelamento)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var mecanicoId)) return Forbid();
-        var resultado = await _gerenciadorExecucao.IniciarExecucaoAsync(numero, mecanicoId, cancelamento);
+        var resultado = await _execucaoOrdemServicoService.IniciarExecucaoAsync(numero, mecanicoId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
@@ -69,7 +69,7 @@ public sealed class ExecucaoOrdensServicoController : OficinaControllerBase
     public async Task<IActionResult> IniciarServicoAsync([FromRoute] long numero, [FromRoute] Guid servicoId, CancellationToken cancelamento)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var mecanicoId)) return Forbid();
-        var resultado = await _gerenciadorExecucao.IniciarServicoAsync(numero, servicoId, mecanicoId, cancelamento);
+        var resultado = await _execucaoOrdemServicoService.IniciarServicoAsync(numero, servicoId, mecanicoId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
@@ -85,7 +85,7 @@ public sealed class ExecucaoOrdensServicoController : OficinaControllerBase
     public async Task<IActionResult> ConcluirServicoAsync([FromRoute] long numero, [FromRoute] Guid servicoId, CancellationToken cancelamento)
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var mecanicoId)) return Forbid();
-        var resultado = await _gerenciadorExecucao.ConcluirServicoAsync(numero, servicoId, mecanicoId, cancelamento);
+        var resultado = await _execucaoOrdemServicoService.ConcluirServicoAsync(numero, servicoId, mecanicoId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
     }
@@ -103,7 +103,7 @@ public sealed class ExecucaoOrdensServicoController : OficinaControllerBase
     {
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var mecanicoId)) return Forbid();
         var consumos = entrada.Consumos ?? [];
-        var resultado = await _gerenciadorExecucao.RegistrarConsumoAsync(numero, mecanicoId,
+        var resultado = await _execucaoOrdemServicoService.RegistrarConsumoAsync(numero, mecanicoId,
             consumos.Select(item => new ConsumoSolicitado(item.ItemEstoqueId, item.Quantidade)).ToArray(), cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);

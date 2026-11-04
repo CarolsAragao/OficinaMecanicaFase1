@@ -4,7 +4,7 @@ using OficinaMecanicaFase1.Domain.Estoque;
 
 namespace OficinaMecanicaFase1.Application.Catalogo;
 
-public sealed class GerenciadorCatalogo(IRepositorioCatalogo repositorio, TimeProvider tempo)
+public sealed class CatalogoService(ICatalogoRepository repositorio, TimeProvider tempo)
 {
     public Task<IReadOnlyList<ServicoCatalogo>> ListarServicosAsync(bool somenteAtivos, CancellationToken cancelamento) =>
         repositorio.ListarServicosAsync(somenteAtivos, cancelamento);

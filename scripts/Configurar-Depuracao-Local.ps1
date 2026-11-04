@@ -39,7 +39,7 @@ $porta = if ($linhaPorta) { $linhaPorta.Substring('SQLSERVER_PORT='.Length) } el
 if ($porta -notmatch '^\d{1,5}$' -or [int]$porta -lt 1 -or [int]$porta -gt 65535) {
     throw 'SQLSERVER_PORT deve ser uma porta valida entre 1 e 65535.'
 }
-$conexao = "Server=localhost,$porta;Database=OficinaMecanica;User Id=sa;Password=$senha;Encrypt=True;TrustServerCertificate=True"
+$conexao = "Server=tcp:127.0.0.1,$porta;Database=OficinaMecanica;User Id=sa;Password=$senha;Encrypt=True;TrustServerCertificate=True"
 & dotnet user-secrets set 'ConnectionStrings:Oficina' $conexao --project $projetoApi
 if ($LASTEXITCODE -ne 0) {
     throw 'Não foi possível salvar a conexão nos User Secrets da API.'

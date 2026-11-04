@@ -2,7 +2,7 @@ using OficinaMecanicaFase1.Domain.Cadastros;
 
 namespace OficinaMecanicaFase1.Application.Cadastros;
 
-public interface IRepositorioCadastros
+public interface ICadastroRepository
 {
     Task<IReadOnlyList<Cliente>> ListarClientesAsync(string? documento, CancellationToken cancelamento);
     Task<Cliente?> ObterClienteAsync(Guid id, CancellationToken cancelamento);

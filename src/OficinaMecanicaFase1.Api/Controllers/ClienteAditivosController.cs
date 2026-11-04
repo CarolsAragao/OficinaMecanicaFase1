@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using OficinaMecanicaFase1.Api.OrdensServico;
 using OficinaMecanicaFase1.Application.OrdensServico;
 using OficinaMecanicaFase1.Domain.Orcamentos;
-using OficinaMecanicaFase1.Infrastructure.Persistence;
 using System.Security.Claims;
 
 namespace OficinaMecanicaFase1.Api.Controllers;
@@ -15,11 +14,11 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [AllowAnonymous]
 public sealed class ClienteAditivosController : OficinaControllerBase
 {
-    private readonly GerenciadorAditivos _gerenciadorAditivos;
+    private readonly AditivoService _aditivoService;
 
-    public ClienteAditivosController(GerenciadorAditivos gerenciadorAditivos)
+    public ClienteAditivosController(AditivoService aditivoService)
     {
-        _gerenciadorAditivos = gerenciadorAditivos;
+        _aditivoService = aditivoService;
     }
 
     [HttpPost("{aditivoId:guid}/consulta")]
@@ -28,7 +27,7 @@ public sealed class ClienteAditivosController : OficinaControllerBase
     public async Task<IActionResult> ConsultarClienteAsync([FromRoute] long numero, [FromRoute] Guid aditivoId, [FromBody] ConsultarAditivoRequest entrada, CancellationToken ct)
     {
         HttpContext.Response.Headers.CacheControl = "no-store";
-        var aditivo = await _gerenciadorAditivos.ConsultarClienteAsync(numero, aditivoId, entrada.Documento, ct);
+        var aditivo = await _aditivoService.ConsultarClienteAsync(numero, aditivoId, entrada.Documento, ct);
         return aditivo is null ? NotFound() : Ok(AditivoResponse.De(aditivo, numero));
     }
 
@@ -40,10 +39,10 @@ public sealed class ClienteAditivosController : OficinaControllerBase
     public async Task<IActionResult> DecidirAsync([FromRoute] long numero, [FromRoute] Guid aditivoId, [FromBody] DecidirAditivoRequest entrada, CancellationToken ct)
     {
         HttpContext.Response.Headers.CacheControl = "no-store";
-        var resultado = await _gerenciadorAditivos.DecidirAsync(numero, aditivoId, entrada.Documento,
+        var resultado = await _aditivoService.DecidirAsync(numero, aditivoId, entrada.Documento,
             entrada.CodigoAcesso, entrada.Aprovar, entrada.Motivo, ct);
         return resultado.Erro == ErroOrdemServico.Nenhum
-            ? Ok(AditivoResponse.De((await _gerenciadorAditivos.ConsultarInternoAsync(numero, aditivoId, ct))!, numero))
+            ? Ok(AditivoResponse.De((await _aditivoService.ConsultarInternoAsync(numero, aditivoId, ct))!, numero))
             : Erro(resultado);
     }
 

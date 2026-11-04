@@ -12,13 +12,13 @@ namespace OficinaMecanicaFase1.Api.Controllers;
 [AllowAnonymous]
 public sealed class ClienteOrcamentoController : OficinaControllerBase
 {
-    private readonly GerenciadorDecisaoOrcamento _gerenciadorDecisaoOrcamento;
-    private readonly GerenciadorOrdensServico _gerenciadorOrdensServico;
+    private readonly DecisaoOrcamentoService _decisaoOrcamentoService;
+    private readonly OrdemServicoService _ordemServicoService;
 
-    public ClienteOrcamentoController(GerenciadorDecisaoOrcamento gerenciadorDecisaoOrcamento, GerenciadorOrdensServico gerenciadorOrdensServico)
+    public ClienteOrcamentoController(DecisaoOrcamentoService decisaoOrcamentoService, OrdemServicoService ordemServicoService)
     {
-        _gerenciadorDecisaoOrcamento = gerenciadorDecisaoOrcamento;
-        _gerenciadorOrdensServico = gerenciadorOrdensServico;
+        _decisaoOrcamentoService = decisaoOrcamentoService;
+        _ordemServicoService = ordemServicoService;
     }
 
     [HttpPost("{numero:long}/orcamento/consulta", Name = "ConsultarOrcamentoCliente")]
@@ -28,7 +28,7 @@ public sealed class ClienteOrcamentoController : OficinaControllerBase
     public async Task<IActionResult> ConsultarAsync([FromRoute] long numero, [FromBody] ConsultarOrcamentoClienteRequest entrada, CancellationToken cancelamento)
     {
         HttpContext.Response.Headers.CacheControl = "no-store";
-        var proposta = await _gerenciadorDecisaoOrcamento.ConsultarPropostaAsync(numero, entrada.Documento, cancelamento);
+        var proposta = await _decisaoOrcamentoService.ConsultarPropostaAsync(numero, entrada.Documento, cancelamento);
         return proposta is null ? NotFound() : Ok(OrcamentoResponse.De(proposta, numero));
     }
 
@@ -41,7 +41,7 @@ public sealed class ClienteOrcamentoController : OficinaControllerBase
     public async Task<IActionResult> DecidirAsync([FromRoute] long numero, [FromBody] DecidirOrcamentoClienteRequest entrada, CancellationToken cancelamento)
     {
         HttpContext.Response.Headers.CacheControl = "no-store";
-        var resultado = await _gerenciadorDecisaoOrcamento.DecidirAsync(numero, entrada.Documento, entrada.CodigoAcesso,
+        var resultado = await _decisaoOrcamentoService.DecidirAsync(numero, entrada.Documento, entrada.CodigoAcesso,
             entrada.Aprovar, entrada.Motivo, cancelamento);
         return resultado.Erro switch
         {
@@ -63,7 +63,7 @@ public sealed class ClienteOrcamentoController : OficinaControllerBase
     public async Task<IActionResult> ConsultarAndamentoAsync([FromRoute] long numero, [FromBody] ConsultarOrcamentoClienteRequest entrada, CancellationToken cancelamento)
     {
         HttpContext.Response.Headers.CacheControl = "no-store";
-        var ordem = await _gerenciadorOrdensServico.ObterAndamentoClienteAsync(numero, entrada.Documento, cancelamento);
+        var ordem = await _ordemServicoService.ObterAndamentoClienteAsync(numero, entrada.Documento, cancelamento);
         return ordem is null ? NotFound() : Ok(AndamentoOrdemServicoResponse.De(ordem));
     }
 }

@@ -4,8 +4,8 @@ using OficinaMecanicaFase1.Domain.OrdensServico;
 
 namespace OficinaMecanicaFase1.Infrastructure.Persistence;
 
-public sealed class RepositorioConsultaGestaoOrdensServico(OficinaDbContext db)
-    : IConsultaGestaoOrdensServico
+public sealed class ConsultaGestaoOrdemServicoRepository(OficinaDbContext db)
+    : IConsultaGestaoOrdemServicoRepository
 {
     public async Task<PaginaOrdensServico> ListarAsync(StatusOrdemServico? status,
         int pagina, int tamanhoPagina, CancellationToken cancelamento)
