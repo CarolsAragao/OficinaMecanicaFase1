@@ -57,7 +57,7 @@ public sealed class ClienteOrcamentoController : OficinaControllerBase
     }
 
     [HttpPost("{numero:long}/andamento/consulta", Name = "ConsultarAndamentoCliente")]
-    [EndpointSummary("Consulta pública por número da OS e CPF/CNPJ, com número, status, última atualização e marcos.")]
+    [EndpointSummary("Consulta pública por número da OS e CPF/CNPJ, com número, status, última atualização e histórico.")]
     [ProducesResponseType(typeof(AndamentoOrdemServicoResponse), 200)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> ConsultarAndamentoAsync([FromRoute] long numero, [FromBody] ConsultarOrcamentoClienteRequest entrada, CancellationToken cancelamento)

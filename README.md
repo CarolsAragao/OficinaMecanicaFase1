@@ -198,7 +198,7 @@ Exemplo de corpo:
 | Método | Rota | Uso |
 | --- | --- | --- |
 | POST | `/api/ordens-servico` | Abrir OS como `Recebida`; exige Administrador ou Atendente. |
-| GET | `/api/ordens-servico/{numero}` | Consultar serviços, itens, status e marcos da OS. |
+| GET | `/api/ordens-servico/{numero}` | Consultar serviços, itens, status e histórico da OS. |
 | POST | `/api/ordens-servico/{numero}/servicos` | Acrescentar serviço ativo antes da aprovação do orçamento; exige Atendente ou Mecânico. Corpo: `{"servicoCatalogoId":"GUID"}`. |
 | POST | `/api/ordens-servico/{numero}/itens` | Acrescentar item ativo e consultar sua disponibilidade; exige Atendente ou Mecânico. Corpo: `{"itemEstoqueId":"GUID","quantidade":1}`. |
 | POST | `/api/ordens-servico/{numero}/diagnostico/inicio` | Mecânico inicia o diagnóstico e muda a OS para `EmDiagnostico`. |
@@ -268,7 +268,7 @@ A aprovação tenta reservar a quantidade adicional, sem baixar o estoque. Se fa
 
 Quando o Mecânico conclui o último serviço autorizado, a OS passa a `Finalizada` e ganha o marco `OS finalizada`. O Atendente registra a entrega em `POST /api/ordens-servico/{numero}/entrega` com JWT de `Atendente`. A rota aceita apenas uma OS `Finalizada`, grava o instante e o responsável, muda para `Entregue` e acrescenta o marco `OS entregue ao cliente`. Tentar entregar antes da finalização ou repetir a entrega retorna `400`.
 
-O cliente consulta `POST /api/cliente/ordens-servico/{numero}/andamento/consulta` com `{"documento":"529.982.247-25"}`. A rota é pública, mas só retorna dados quando número da OS e CPF/CNPJ correspondem; caso contrário, retorna `404`. A resposta contém somente `numero`, `status`, `ultimaAtualizacaoEmUtc` e `marcos` (status, descrição e instante). A última atualização é o instante do marco mais recente. Documento, preços, diagnóstico e notas internas não são expostos nessa consulta, conforme D-14.
+O cliente consulta `POST /api/cliente/ordens-servico/{numero}/andamento/consulta` com `{"documento":"529.982.247-25"}`. A rota é pública, mas só retorna dados quando número da OS e CPF/CNPJ correspondem; caso contrário, retorna `404`. A resposta contém somente `numero`, `status`, `ultimaAtualizacaoEmUtc` e `historico` (status, descrição e instante). A última atualização é o instante do registro mais recente. Documento, preços, diagnóstico e notas internas não são expostos nessa consulta, conforme D-14.
 
 ## Gestão de ordens de serviço e tempo médio
 

@@ -42,21 +42,21 @@ public sealed record ItemNecessarioResponse(
 public sealed record MarcoOrdemServicoResponse(
     string Status, string Descricao, DateTimeOffset RegistradoEmUtc);
 public sealed record AndamentoOrdemServicoResponse(long Numero, string Status,
-    DateTimeOffset UltimaAtualizacaoEmUtc, MarcoOrdemServicoResponse[] Marcos)
+    DateTimeOffset UltimaAtualizacaoEmUtc, MarcoOrdemServicoResponse[] Historico)
 {
     public static AndamentoOrdemServicoResponse De(OrdemServico ordem)
     {
-        var marcos = ordem.Marcos.OrderBy(marco => marco.RegistradoEmUtc)
+        var historico = ordem.Historico.OrderBy(marco => marco.RegistradoEmUtc)
             .Select(marco => new MarcoOrdemServicoResponse(marco.Status.ToString(),
                 marco.Descricao, marco.RegistradoEmUtc)).ToArray();
         return new AndamentoOrdemServicoResponse(ordem.Numero, ordem.Status.ToString(),
-            marcos.Length == 0 ? ordem.CriadaEmUtc : marcos[^1].RegistradoEmUtc, marcos);
+            historico.Length == 0 ? ordem.CriadaEmUtc : historico[^1].RegistradoEmUtc, historico);
     }
 }
 public sealed record OrdemServicoResponse(
     Guid Id, long Numero, Guid ClienteId, Guid VeiculoId, string Status,
     DateTimeOffset CriadaEmUtc, DiagnosticoResponse Diagnostico, ServicoSolicitadoResponse[] ServicosSolicitados,
-    ItemNecessarioResponse[] ItensNecessarios, MarcoOrdemServicoResponse[] Marcos,
+    ItemNecessarioResponse[] ItensNecessarios, MarcoOrdemServicoResponse[] Historico,
     DateTimeOffset? OrcamentoAprovadoEmUtc, DateTimeOffset? EncerradaPorRejeicaoEmUtc,
     string? MotivoEncerramento, string SituacaoReserva, DateTimeOffset? ReservaConfirmadaEmUtc,
     DateTimeOffset? ReservaRecusadaEmUtc, bool PodeIniciarExecucao,
@@ -72,7 +72,7 @@ public sealed record OrdemServicoResponse(
             servico.IniciadoEmUtc, servico.IniciadoPorId, servico.ConcluidoEmUtc, servico.ConcluidoPorId)).ToArray(),
         ordem.ItensNecessarios.Select(item => new ItemNecessarioResponse(
             item.ItemEstoqueId, item.Quantidade, item.SaldoDisponivelConsultado)).ToArray(),
-        ordem.Marcos.OrderBy(marco => marco.RegistradoEmUtc)
+        ordem.Historico.OrderBy(marco => marco.RegistradoEmUtc)
             .Select(marco => new MarcoOrdemServicoResponse(
                 marco.Status.ToString(), marco.Descricao, marco.RegistradoEmUtc)).ToArray(),
         ordem.OrcamentoAprovadoEmUtc, ordem.EncerradaPorRejeicaoEmUtc, ordem.MotivoEncerramento,

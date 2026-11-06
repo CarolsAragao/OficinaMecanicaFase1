@@ -8,7 +8,7 @@ public sealed class OrdemServico
 {
     private readonly List<ServicoSolicitado> _servicosSolicitados = [];
     private readonly List<ItemNecessario> _itensNecessarios = [];
-    private readonly List<MarcoOrdemServico> _marcos = [];
+    private readonly List<RegistroHistoricoOrdemServico> _historico = [];
     private OrdemServico() { }
 
     public Guid Id { get; private set; }
@@ -41,7 +41,7 @@ public sealed class OrdemServico
     public byte[] Versao { get; private set; } = [];
     public IReadOnlyCollection<ServicoSolicitado> ServicosSolicitados => _servicosSolicitados;
     public IReadOnlyCollection<ItemNecessario> ItensNecessarios => _itensNecessarios;
-    public IReadOnlyCollection<MarcoOrdemServico> Marcos => _marcos;
+    public IReadOnlyCollection<RegistroHistoricoOrdemServico> Historico => _historico;
 
     public static OrdemServico Criar(
         Guid clienteId, Guid veiculoId, IEnumerable<Guid> servicosIds,
@@ -70,7 +70,7 @@ public sealed class OrdemServico
             ordem._servicosSolicitados.Add(new ServicoSolicitado(ordem.Id, servicoId));
         foreach (var item in itensNecessarios)
             ordem._itensNecessarios.Add(new ItemNecessario(ordem.Id, item.ItemEstoqueId, item.Quantidade, item.SaldoDisponivel));
-        ordem._marcos.Add(new MarcoOrdemServico(ordem.Id, ordem.Status, "OS recebida", dataUtc));
+        ordem._historico.Add(new RegistroHistoricoOrdemServico(ordem.Id, ordem.Status, "OS recebida", dataUtc));
         return ordem;
     }
 
@@ -96,7 +96,7 @@ public sealed class OrdemServico
         return item;
     }
 
-    public MarcoOrdemServico IniciarDiagnostico(Guid mecanicoId, DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico IniciarDiagnostico(Guid mecanicoId, DateTimeOffset agora)
     {
         if (Status != StatusOrdemServico.Recebida)
             throw new InvalidOperationException("O diagnóstico só pode ser iniciado em uma OS recebida.");
@@ -104,12 +104,12 @@ public sealed class OrdemServico
         Status = StatusOrdemServico.EmDiagnostico;
         DiagnosticoIniciadoPorId = mecanicoId;
         DiagnosticoIniciadoEmUtc = agora.ToUniversalTime();
-        var marco = new MarcoOrdemServico(Id, Status, "Diagnóstico iniciado", agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, "Diagnóstico iniciado", agora);
+        _historico.Add(marco);
         return marco;
     }
 
-    public MarcoOrdemServico RegistrarDiagnostico(Guid mecanicoId, string descricao, DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico RegistrarDiagnostico(Guid mecanicoId, string descricao, DateTimeOffset agora)
     {
         if (Status != StatusOrdemServico.EmDiagnostico || DiagnosticoIniciadoEmUtc is null || DiagnosticoRegistradoEmUtc is not null)
             throw new InvalidOperationException("Inicie o diagnóstico antes de registrá-lo; um diagnóstico já registrado não pode ser repetido.");
@@ -119,18 +119,18 @@ public sealed class OrdemServico
         DiagnosticoDescricao = descricao.Trim();
         DiagnosticoRegistradoPorId = mecanicoId;
         DiagnosticoRegistradoEmUtc = agora.ToUniversalTime();
-        var marco = new MarcoOrdemServico(Id, Status, "Diagnóstico registrado", agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, "Diagnóstico registrado", agora);
+        _historico.Add(marco);
         return marco;
     }
 
-    public MarcoOrdemServico DisponibilizarOrcamento(DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico DisponibilizarOrcamento(DateTimeOffset agora)
     {
         if (Status != StatusOrdemServico.EmDiagnostico || DiagnosticoRegistradoEmUtc is null)
             throw new InvalidOperationException("Registre o diagnóstico antes de gerar o orçamento.");
         Status = StatusOrdemServico.AguardandoAprovacao;
-        var marco = new MarcoOrdemServico(Id, Status, "Orçamento disponibilizado", agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, "Orçamento disponibilizado", agora);
+        _historico.Add(marco);
         return marco;
     }
 
@@ -157,18 +157,18 @@ public sealed class OrdemServico
         CodigoAcessoHash is { Length: 32 } && hash.Length == 32 &&
         CryptographicOperations.FixedTimeEquals(CodigoAcessoHash, hash);
 
-    public MarcoOrdemServico RegistrarAprovacaoOrcamento(DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico RegistrarAprovacaoOrcamento(DateTimeOffset agora)
     {
         if (Status != StatusOrdemServico.AguardandoAprovacao ||
             OrcamentoAprovadoEmUtc is not null || EncerradaPorRejeicaoEmUtc is not null)
             throw new InvalidOperationException("A OS não aguarda decisão do orçamento.");
         OrcamentoAprovadoEmUtc = agora.ToUniversalTime();
-        var marco = new MarcoOrdemServico(Id, Status, "Orçamento aprovado", agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, "Orçamento aprovado", agora);
+        _historico.Add(marco);
         return marco;
     }
 
-    public (MarcoOrdemServico Rejeicao, MarcoOrdemServico Encerramento) EncerrarPorRejeicao(
+    public (RegistroHistoricoOrdemServico Rejeicao, RegistroHistoricoOrdemServico Encerramento) EncerrarPorRejeicao(
         string motivo, DateTimeOffset agora)
     {
         if (Status != StatusOrdemServico.AguardandoAprovacao ||
@@ -178,31 +178,31 @@ public sealed class OrdemServico
             throw new ArgumentException("Informe o motivo da rejeição em até 1000 caracteres.", nameof(motivo));
         EncerradaPorRejeicaoEmUtc = agora.ToUniversalTime();
         MotivoEncerramento = motivo.Trim();
-        var rejeicao = new MarcoOrdemServico(Id, Status, "Orçamento rejeitado", agora);
-        var encerramento = new MarcoOrdemServico(Id, Status, "OS encerrada por rejeição", agora);
-        _marcos.Add(rejeicao);
-        _marcos.Add(encerramento);
+        var rejeicao = new RegistroHistoricoOrdemServico(Id, Status, "Orçamento rejeitado", agora);
+        var encerramento = new RegistroHistoricoOrdemServico(Id, Status, "OS encerrada por rejeição", agora);
+        _historico.Add(rejeicao);
+        _historico.Add(encerramento);
         return (rejeicao, encerramento);
     }
 
-    public MarcoOrdemServico ConfirmarReserva(DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico ConfirmarReserva(DateTimeOffset agora)
     {
         ValidarTentativaReserva();
         SituacaoReserva = SituacaoReservaOrdemServico.Confirmada;
         ReservaConfirmadaEmUtc = agora.ToUniversalTime();
         ReservaRecusadaEmUtc = null;
-        var marco = new MarcoOrdemServico(Id, Status, "Itens de estoque reservados para a OS", agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, "Itens de estoque reservados para a OS", agora);
+        _historico.Add(marco);
         return marco;
     }
 
-    public MarcoOrdemServico RecusarReserva(DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico RecusarReserva(DateTimeOffset agora)
     {
         ValidarTentativaReserva();
         SituacaoReserva = SituacaoReservaOrdemServico.Recusada;
         ReservaRecusadaEmUtc = agora.ToUniversalTime();
-        var marco = new MarcoOrdemServico(Id, Status, "Reserva recusada; Estoquista notificado", agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, "Reserva recusada; Estoquista notificado", agora);
+        _historico.Add(marco);
         return marco;
     }
 
@@ -214,7 +214,7 @@ public sealed class OrdemServico
             throw new InvalidOperationException("A OS não permite uma tentativa de reserva.");
     }
 
-    public MarcoOrdemServico IniciarExecucao(Guid mecanicoId, DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico IniciarExecucao(Guid mecanicoId, DateTimeOffset agora)
     {
         if (!PodeIniciarExecucao)
             throw new InvalidOperationException("A execução exige orçamento aprovado e reserva confirmada.");
@@ -222,36 +222,36 @@ public sealed class OrdemServico
         Status = StatusOrdemServico.EmExecucao;
         ExecucaoIniciadaEmUtc = agora.ToUniversalTime();
         ExecucaoIniciadaPorId = mecanicoId;
-        var marco = new MarcoOrdemServico(Id, Status, "Execução iniciada", agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, "Execução iniciada", agora);
+        _historico.Add(marco);
         return marco;
     }
 
-    public MarcoOrdemServico IniciarServico(Guid servicoId, Guid mecanicoId, DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico IniciarServico(Guid servicoId, Guid mecanicoId, DateTimeOffset agora)
     {
         if (Status != StatusOrdemServico.EmExecucao)
             throw new InvalidOperationException("A OS precisa estar em execução para iniciar um serviço.");
         var servico = _servicosSolicitados.SingleOrDefault(item => item.ServicoCatalogoId == servicoId);
         if (servico is null) throw new ArgumentException("O serviço não foi autorizado nesta OS.", nameof(servicoId));
         servico.Iniciar(mecanicoId, agora);
-        var marco = new MarcoOrdemServico(Id, Status, "Serviço iniciado", agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, "Serviço iniciado", agora);
+        _historico.Add(marco);
         return marco;
     }
 
-    public MarcoOrdemServico ConcluirServico(Guid servicoId, Guid mecanicoId, DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico ConcluirServico(Guid servicoId, Guid mecanicoId, DateTimeOffset agora)
     {
         if (Status != StatusOrdemServico.EmExecucao)
             throw new InvalidOperationException("A OS precisa estar em execução para concluir um serviço.");
         var servico = _servicosSolicitados.SingleOrDefault(item => item.ServicoCatalogoId == servicoId);
         if (servico is null) throw new ArgumentException("O serviço não foi autorizado nesta OS.", nameof(servicoId));
         servico.Concluir(mecanicoId, agora);
-        var marco = new MarcoOrdemServico(Id, Status, "Serviço concluído", agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, "Serviço concluído", agora);
+        _historico.Add(marco);
         if (_servicosSolicitados.All(item => item.ConcluidoEmUtc is not null))
         {
             Status = StatusOrdemServico.Finalizada;
-            _marcos.Add(new MarcoOrdemServico(Id, Status, "OS finalizada", agora));
+            _historico.Add(new RegistroHistoricoOrdemServico(Id, Status, "OS finalizada", agora));
         }
         return marco;
     }
@@ -259,16 +259,16 @@ public sealed class OrdemServico
     public bool AutorizaItem(Guid itemEstoqueId) =>
         _itensNecessarios.Any(item => item.ItemEstoqueId == itemEstoqueId);
 
-    public MarcoOrdemServico RegistrarMarcoAditivo(string descricao, DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico RegistrarMarcoAditivo(string descricao, DateTimeOffset agora)
     {
         if (Status != StatusOrdemServico.EmExecucao)
             throw new InvalidOperationException("Aditivos só podem ser registrados durante a execução.");
-        var marco = new MarcoOrdemServico(Id, Status, descricao, agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, descricao, agora);
+        _historico.Add(marco);
         return marco;
     }
 
-    public MarcoOrdemServico RegistrarEntrega(Guid atendenteId, DateTimeOffset agora)
+    public RegistroHistoricoOrdemServico RegistrarEntrega(Guid atendenteId, DateTimeOffset agora)
     {
         if (Status != StatusOrdemServico.Finalizada)
             throw new InvalidOperationException("A OS só pode ser entregue depois de finalizada.");
@@ -276,8 +276,8 @@ public sealed class OrdemServico
         Status = StatusOrdemServico.Entregue;
         EntregueEmUtc = agora.ToUniversalTime();
         EntreguePorId = atendenteId;
-        var marco = new MarcoOrdemServico(Id, Status, "OS entregue ao cliente", agora);
-        _marcos.Add(marco);
+        var marco = new RegistroHistoricoOrdemServico(Id, Status, "OS entregue ao cliente", agora);
+        _historico.Add(marco);
         return marco;
     }
 

@@ -26,7 +26,7 @@ public interface IOperacoesAditivos
     Task<ItemEstoque?> BloquearItemAsync(Guid id, CancellationToken ct);
     Task<ReservaItemOrdemServico?> ObterReservaAtivaAsync(Guid ordemId, Guid itemId, CancellationToken ct);
     void Adicionar(Aditivo aditivo);
-    void Adicionar(MarcoOrdemServico marco);
+    void Adicionar(RegistroHistoricoOrdemServico marco);
     void Adicionar(ServicoSolicitado servico);
     void Adicionar(ItemNecessario item);
     void Adicionar(ReservaItemOrdemServico reserva);

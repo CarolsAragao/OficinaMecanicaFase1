@@ -1,8 +1,8 @@
 namespace OficinaMecanicaFase1.Domain.OrdensServico;
 
-public sealed class MarcoOrdemServico
+public sealed class RegistroHistoricoOrdemServico
 {
-    private MarcoOrdemServico() { }
+    private RegistroHistoricoOrdemServico() { }
 
     public Guid Id { get; private set; }
     public Guid OrdemServicoId { get; private set; }
@@ -10,7 +10,7 @@ public sealed class MarcoOrdemServico
     public string Descricao { get; private set; } = null!;
     public DateTimeOffset RegistradoEmUtc { get; private set; }
 
-    internal MarcoOrdemServico(Guid ordemServicoId, StatusOrdemServico status, string descricao, DateTimeOffset registradoEmUtc)
+    internal RegistroHistoricoOrdemServico(Guid ordemServicoId, StatusOrdemServico status, string descricao, DateTimeOffset registradoEmUtc)
     {
         Id = Guid.NewGuid();
         OrdemServicoId = ordemServicoId;

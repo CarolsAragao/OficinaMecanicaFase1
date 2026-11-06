@@ -169,8 +169,8 @@ public sealed class OrdensServicoTests
         var ordem = OrdemServico.Criar(Guid.NewGuid(), Guid.NewGuid(), [servicoId], [], DateTimeOffset.Now);
         Assert.Equal(StatusOrdemServico.Recebida, ordem.Status);
         Assert.Single(ordem.ServicosSolicitados);
-        Assert.Single(ordem.Marcos);
-        Assert.Equal("OS recebida", ordem.Marcos.Single().Descricao);
+        Assert.Single(ordem.Historico);
+        Assert.Equal("OS recebida", ordem.Historico.Single().Descricao);
         Assert.Equal(TimeSpan.Zero, ordem.CriadaEmUtc.Offset);
         Assert.Throws<ArgumentException>(() => OrdemServico.Criar(Guid.NewGuid(), Guid.NewGuid(), [], [], DateTimeOffset.UtcNow));
     }
@@ -258,7 +258,7 @@ public sealed class OrdensServicoTests
         var osAtualizada = (await cliente.GetFromJsonAsync<OrdemServicoResponse>(rota))!;
         Assert.Equal("AguardandoAprovacao", osAtualizada.Status);
         Assert.Equal("Troca de óleo necessária", osAtualizada.Diagnostico.Descricao);
-        Assert.Equal(4, osAtualizada.Marcos.Length);
+        Assert.Equal(4, osAtualizada.Historico.Length);
         await AutenticarAsync(cliente, "admin@orcamentos.test", "AdminDeTeste123!");
         Assert.Equal(HttpStatusCode.OK, (await cliente.PutAsJsonAsync($"/api/servicos/{servico.Id}",
             new ServicoCatalogoRequest("Revisão", null, 300m))).StatusCode);
@@ -401,8 +401,8 @@ public sealed class OrdensServicoTests
         Assert.Equal("AguardandoAprovacao", encerrada.Status);
         Assert.NotNull(encerrada.EncerradaPorRejeicaoEmUtc);
         Assert.Equal("Cliente desistiu", encerrada.MotivoEncerramento);
-        Assert.Contains(encerrada.Marcos, marco => marco.Descricao == "Orçamento rejeitado");
-        Assert.Contains(encerrada.Marcos, marco => marco.Descricao == "OS encerrada por rejeição");
+        Assert.Contains(encerrada.Historico, marco => marco.Descricao == "Orçamento rejeitado");
+        Assert.Contains(encerrada.Historico, marco => marco.Descricao == "OS encerrada por rejeição");
         using (var escopo = fabrica.Services.CreateScope())
         {
             var db = escopo.ServiceProvider.GetRequiredService<OficinaDbContext>();
@@ -524,8 +524,8 @@ public sealed class OrdensServicoTests
         Assert.Equal(clienteAna.Id, ordem.ClienteId);
         Assert.Equal(veiculoAna.Id, ordem.VeiculoId);
         Assert.Equal("Recebida", ordem.Status);
-        Assert.Single(ordem.Marcos);
-        Assert.Equal("OS recebida", ordem.Marcos[0].Descricao);
+        Assert.Single(ordem.Historico);
+        Assert.Equal("OS recebida", ordem.Historico[0].Descricao);
         Assert.Equal(2m, Assert.Single(ordem.ItensNecessarios, item => item.ItemEstoqueId == peca.Id).SaldoDisponivelConsultado);
         Assert.Equal(1.25m, Assert.Single(ordem.ItensNecessarios, item => item.ItemEstoqueId == insumo.Id).SaldoDisponivelConsultado);
 
@@ -759,13 +759,13 @@ public sealed class OrdensServicoTests
         using (var json = JsonDocument.Parse(await andamento.Content.ReadAsStringAsync()))
         {
             var raiz = json.RootElement;
-            Assert.Equal(new[] { "marcos", "numero", "status", "ultimaAtualizacaoEmUtc" },
+            Assert.Equal(new[] { "historico", "numero", "status", "ultimaAtualizacaoEmUtc" },
                 raiz.EnumerateObject().Select(propriedade => propriedade.Name).OrderBy(nome => nome));
             Assert.Equal("Entregue", raiz.GetProperty("status").GetString());
             Assert.Equal(entregue.EntregueEmUtc!.Value,
                 raiz.GetProperty("ultimaAtualizacaoEmUtc").GetDateTimeOffset());
-            Assert.Contains(raiz.GetProperty("marcos").EnumerateArray(), marco =>
-                marco.GetProperty("descricao").GetString() == "OS entregue ao cliente");
+            Assert.Contains(raiz.GetProperty("historico").EnumerateArray(), historico =>
+                historico.GetProperty("descricao").GetString() == "OS entregue ao cliente");
         }
         using var escopo = fabrica.Services.CreateScope();
         var db = escopo.ServiceProvider.GetRequiredService<OficinaDbContext>();

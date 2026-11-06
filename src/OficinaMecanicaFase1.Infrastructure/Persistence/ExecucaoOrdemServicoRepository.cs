@@ -29,7 +29,7 @@ public sealed class ExecucaoOrdemServicoRepository(DbContextOptions<OficinaDbCon
                         ErroOrdemServico.NaoEncontrado, "Ordem de serviço não encontrada.");
                 await db.Entry(ordem).Collection(item => item.ServicosSolicitados).LoadAsync(cancelamento);
                 await db.Entry(ordem).Collection(item => item.ItensNecessarios).LoadAsync(cancelamento);
-                await db.Entry(ordem).Collection(item => item.Marcos).LoadAsync(cancelamento);
+                await db.Entry(ordem).Collection(item => item.Historico).LoadAsync(cancelamento);
                 var orcamento = await db.Orcamentos.Include(item => item.Linhas)
                     .FirstOrDefaultAsync(item => item.OrdemServicoId == ordem.Id, cancelamento);
                 ResultadoOrdemServico<OrdemServico> resultado;
@@ -73,7 +73,7 @@ public sealed class ExecucaoOrdemServicoRepository(DbContextOptions<OficinaDbCon
             IReadOnlyCollection<Guid> ids, CancellationToken cancelamento) =>
             BloqueioEstoque.BloquearItensAsync(db, ids, cancelamento);
 
-        public void Adicionar(MarcoOrdemServico marco) => db.Set<MarcoOrdemServico>().Add(marco);
+        public void Adicionar(RegistroHistoricoOrdemServico marco) => db.Set<RegistroHistoricoOrdemServico>().Add(marco);
         public void Adicionar(ConsumoItemOrdemServico consumo) => db.Set<ConsumoItemOrdemServico>().Add(consumo);
     }
 }

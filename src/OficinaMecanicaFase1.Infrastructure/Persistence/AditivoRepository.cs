@@ -97,7 +97,7 @@ internal sealed class AditivoRepository(DbContextOptions<OficinaDbContext> opcoe
                 r.OrdemServicoId == ordemId && r.ItemEstoqueId == itemId && r.LiberadaEmUtc == null, ct);
 
         public void Adicionar(Aditivo aditivo) => db.Aditivos.Add(aditivo);
-        public void Adicionar(MarcoOrdemServico marco) => db.Set<MarcoOrdemServico>().Add(marco);
+        public void Adicionar(RegistroHistoricoOrdemServico marco) => db.Set<RegistroHistoricoOrdemServico>().Add(marco);
         public void Adicionar(ServicoSolicitado servico) => db.Set<ServicoSolicitado>().Add(servico);
         public void Adicionar(ItemNecessario item) => db.Set<ItemNecessario>().Add(item);
         public void Adicionar(ReservaItemOrdemServico reserva) => db.ReservasItensOrdensServico.Add(reserva);

@@ -65,6 +65,6 @@ public sealed class ReservaEstoqueRepository(DbContextOptions<OficinaDbContext> 
 
         public void Adicionar(AvisoReservaRecusada aviso) => db.AvisosReservaRecusada.Add(aviso);
         public void Adicionar(ReservaItemOrdemServico reserva) => db.ReservasItensOrdensServico.Add(reserva);
-        public void Adicionar(MarcoOrdemServico marco) => db.Set<MarcoOrdemServico>().Add(marco);
+        public void Adicionar(RegistroHistoricoOrdemServico marco) => db.Set<RegistroHistoricoOrdemServico>().Add(marco);
     }
 }

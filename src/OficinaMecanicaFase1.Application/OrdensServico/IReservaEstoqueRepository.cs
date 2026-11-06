@@ -31,5 +31,5 @@ public interface IOperacoesReservaEstoque
     Task<Dictionary<Guid, ItemEstoque>> BloquearItensAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancelamento);
     void Adicionar(AvisoReservaRecusada aviso);
     void Adicionar(ReservaItemOrdemServico reserva);
-    void Adicionar(MarcoOrdemServico marco);
+    void Adicionar(RegistroHistoricoOrdemServico marco);
 }

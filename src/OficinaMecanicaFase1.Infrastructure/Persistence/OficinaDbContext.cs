@@ -133,9 +133,9 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.HasMany(ordem => ordem.ItensNecessarios).WithOne().HasForeignKey(item => item.OrdemServicoId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.Navigation(ordem => ordem.ItensNecessarios).UsePropertyAccessMode(PropertyAccessMode.Field);
-            entity.HasMany(ordem => ordem.Marcos).WithOne().HasForeignKey(marco => marco.OrdemServicoId)
+            entity.HasMany(ordem => ordem.Historico).WithOne().HasForeignKey(marco => marco.OrdemServicoId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.Navigation(ordem => ordem.Marcos).UsePropertyAccessMode(PropertyAccessMode.Field);
+            entity.Navigation(ordem => ordem.Historico).UsePropertyAccessMode(PropertyAccessMode.Field);
         });
 
         modelBuilder.Entity<ServicoSolicitado>(entity =>
@@ -166,7 +166,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<MarcoOrdemServico>(entity =>
+        modelBuilder.Entity<RegistroHistoricoOrdemServico>(entity =>
         {
             entity.ToTable("MarcosOrdemServico");
             entity.HasKey(marco => marco.Id);

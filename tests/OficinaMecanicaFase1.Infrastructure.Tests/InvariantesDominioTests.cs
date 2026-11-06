@@ -22,7 +22,7 @@ public sealed class InvariantesDominioTests
         Assert.Throws<InvalidOperationException>(() => ordem.RegistrarAprovacaoOrcamento(Inicio.AddMinutes(4)));
         Assert.Throws<InvalidOperationException>(() => ordem.ConfirmarReserva(Inicio.AddMinutes(4)));
         Assert.Throws<InvalidOperationException>(() => ordem.IniciarExecucao(Guid.NewGuid(), Inicio.AddMinutes(4)));
-        Assert.Contains(ordem.Marcos, marco => marco.Descricao == "OS encerrada por rejeição");
+        Assert.Contains(ordem.Historico, marco => marco.Descricao == "OS encerrada por rejeição");
     }
 
     [Fact]

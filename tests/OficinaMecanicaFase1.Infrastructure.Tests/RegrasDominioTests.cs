@@ -198,7 +198,7 @@ public sealed class RegrasDominioTests
         Assert.Equal(novoItem, autorizados.Item!.ItemEstoqueId);
         Assert.True(ordem.AutorizaItem(novoItem));
         ordem.RegistrarMarcoAditivo("Reparo adicional autorizado", Agora.AddMinutes(7));
-        Assert.Contains(ordem.Marcos, marco => marco.Descricao == "Reparo adicional autorizado");
+        Assert.Contains(ordem.Historico, marco => marco.Descricao == "Reparo adicional autorizado");
         var repetidos = ordem.AutorizarAditivo(adicional, novoItem, 0.5m);
         Assert.Null(repetidos.Servico);
         Assert.Null(repetidos.Item);

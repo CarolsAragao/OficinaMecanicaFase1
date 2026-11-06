@@ -21,7 +21,7 @@ public interface IOrdemServicoRepository
     void Adicionar(OrdemServico ordem);
     void Adicionar(ServicoSolicitado servico);
     void Adicionar(ItemNecessario item);
-    void Adicionar(MarcoOrdemServico marco);
+    void Adicionar(RegistroHistoricoOrdemServico marco);
     void Adicionar(Orcamento orcamento);
     void Adicionar(EmissaoCodigoAcesso emissao);
     Task SalvarAsync(CancellationToken cancelamento);

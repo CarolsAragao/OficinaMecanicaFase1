@@ -40,7 +40,7 @@ public sealed class OrdemServicoRepository(OficinaDbContext db) : IOrdemServicoR
         db.OrdensServico
             .Include(ordem => ordem.ServicosSolicitados)
             .Include(ordem => ordem.ItensNecessarios)
-            .Include(ordem => ordem.Marcos)
+            .Include(ordem => ordem.Historico)
             .FirstOrDefaultAsync(ordem => ordem.Numero == numero, cancelamento);
 
     public Task<OrdemServico?> ObterDoClienteAsync(long numero, string documento, CancellationToken cancelamento) =>
@@ -48,7 +48,7 @@ public sealed class OrdemServicoRepository(OficinaDbContext db) : IOrdemServicoR
             db.Clientes.Any(cliente => cliente.Id == ordem.ClienteId && cliente.Documento == documento), cancelamento);
 
     public Task<OrdemServico?> ObterAndamentoDoClienteAsync(long numero, string documento, CancellationToken cancelamento) =>
-        db.OrdensServico.AsNoTracking().Include(ordem => ordem.Marcos)
+        db.OrdensServico.AsNoTracking().Include(ordem => ordem.Historico)
             .FirstOrDefaultAsync(ordem => ordem.Numero == numero &&
                 db.Clientes.Any(cliente => cliente.Id == ordem.ClienteId && cliente.Documento == documento), cancelamento);
 
@@ -69,7 +69,7 @@ public sealed class OrdemServicoRepository(OficinaDbContext db) : IOrdemServicoR
     public void Adicionar(OrdemServico ordem) => db.OrdensServico.Add(ordem);
     public void Adicionar(ServicoSolicitado servico) => db.Set<ServicoSolicitado>().Add(servico);
     public void Adicionar(ItemNecessario item) => db.Set<ItemNecessario>().Add(item);
-    public void Adicionar(MarcoOrdemServico marco) => db.Set<MarcoOrdemServico>().Add(marco);
+    public void Adicionar(RegistroHistoricoOrdemServico marco) => db.Set<RegistroHistoricoOrdemServico>().Add(marco);
     public void Adicionar(Orcamento orcamento) => db.Orcamentos.Add(orcamento);
     public void Adicionar(EmissaoCodigoAcesso emissao) => db.Set<EmissaoCodigoAcesso>().Add(emissao);
 

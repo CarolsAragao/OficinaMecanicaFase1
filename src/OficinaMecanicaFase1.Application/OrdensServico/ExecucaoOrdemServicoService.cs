@@ -80,7 +80,7 @@ public sealed class ExecucaoOrdemServicoService(IExecucaoOrdemServicoRepository 
                         itens[reserva.ItemEstoqueId].LiberarReserva(reserva.QuantidadeRestante);
                     reserva.Liberar(agora);
                 }
-                operacoes.Adicionar(ordem.Marcos.Last());
+                operacoes.Adicionar(ordem.Historico.Last());
             }
             return ResultadoOrdemServico<OrdemServico>.Sucesso(ordem);
         }, cancelamento);
