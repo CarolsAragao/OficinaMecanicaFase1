@@ -776,6 +776,44 @@ public sealed class OrdensServicoTests
         Assert.All(await db.ReservasItensOrdensServico.Where(reserva => reserva.LiberadaEmUtc != null).ToArrayAsync(),
             reserva => Assert.Equal(reserva.Quantidade, reserva.QuantidadeConsumida +
                 (reserva.ItemEstoqueId == item.Id ? 1m : 1m)));
+
+        var agora = DateTimeOffset.UtcNow;
+        OrdemServico PrepararOrdem(StatusOrdemServico status, int diasAtras)
+        {
+            var ordem = OrdemServico.Criar(pessoa.Id, veiculo.Id, [servicoFreio.Id], [], agora.AddDays(-diasAtras));
+            db.OrdensServico.Add(ordem);
+            db.Entry(ordem).Property(os => os.Status).CurrentValue = status;
+            return ordem;
+        }
+
+        var execucaoRecente = PrepararOrdem(StatusOrdemServico.EmExecucao, 1);
+        var recebida = PrepararOrdem(StatusOrdemServico.Recebida, 5);
+        var diagnostico = PrepararOrdem(StatusOrdemServico.EmDiagnostico, 4);
+        var aprovacao = PrepararOrdem(StatusOrdemServico.AguardandoAprovacao, 3);
+        var execucaoAntiga = PrepararOrdem(StatusOrdemServico.EmExecucao, 2);
+        var finalizadaHistorico = PrepararOrdem(StatusOrdemServico.Finalizada, 6);
+        await db.SaveChangesAsync();
+
+        await AutenticarAsync(interno, "admin@execucao.test", "AdminDeTeste123!");
+        var primeiraPagina = (await interno.GetFromJsonAsync<PaginaOrdensServicoResponse>(
+            rotaGestao + "?tamanhoPagina=3"))!;
+        var segundaPagina = (await interno.GetFromJsonAsync<PaginaOrdensServicoResponse>(
+            rotaGestao + "?pagina=2&tamanhoPagina=3"))!;
+        Assert.Equal(5, primeiraPagina.Total);
+        Assert.Equal(5, segundaPagina.Total);
+        Assert.Equal(new[] { execucaoAntiga.Numero, execucaoRecente.Numero, aprovacao.Numero },
+            primeiraPagina.Ordens.Select(ordem => ordem.Numero));
+        Assert.Equal(new[] { diagnostico.Numero, recebida.Numero },
+            segundaPagina.Ordens.Select(ordem => ordem.Numero));
+        foreach (var encerrada in new[] { finalizadaHistorico.Numero, entregue.Numero })
+        {
+            var historico = (await interno.GetFromJsonAsync<OrdemServicoResponse>($"{rotaGestao}/{encerrada}"))!;
+            var filaFiltrada = (await interno.GetFromJsonAsync<PaginaOrdensServicoResponse>(
+                $"{rotaGestao}?status={historico.Status}"))!;
+            Assert.Equal(encerrada, historico.Numero);
+            Assert.Equal(0, filaFiltrada.Total);
+            Assert.Empty(filaFiltrada.Ordens);
+        }
     }
 
     [Fact]

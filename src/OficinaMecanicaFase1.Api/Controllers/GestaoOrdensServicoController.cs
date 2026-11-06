@@ -23,7 +23,14 @@ public sealed class GestaoOrdensServicoController : OficinaControllerBase
     }
 
     [HttpGet("", Name = "ListarOrdensServicoAdministrativas")]
-    [EndpointSummary("Lista OS por status, da mais recente para a mais antiga, com paginação.")]
+    [EndpointSummary("Lista a fila operacional de ordens de serviço")]
+    [EndpointDescription(
+        "A fila prioriza EmExecucao, AguardandoAprovacao, EmDiagnostico e Recebida, nessa ordem. " +
+        "Dentro de cada status, as OS mais antigas aparecem primeiro. Em caso de empate, o menor número da OS vem primeiro.\n\n" +
+        "Use `status` para filtrar a fila. A paginação começa em 1, com 20 registros por padrão e até 100 por página. " +
+        "O total considera os filtros antes da paginação.\n\n" +
+        "OS Finalizada e Entregue ficam no histórico e podem ser consultadas em " +
+        "`GET /api/administracao/ordens-servico/{numero}`. Filtrar a fila por um desses status retorna uma lista vazia.")]
     [ProducesResponseType(typeof(PaginaOrdensServicoResponse), 200)]
     [ProducesResponseType(401)]
     [ProducesResponseType(403)]

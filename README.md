@@ -276,8 +276,11 @@ O Administrador usa JWT nas consultas `GET /api/administracao/ordens-servico`,
 `GET /api/administracao/ordens-servico/{numero}` e
 `GET /api/administracao/ordens-servico/indicadores/tempo-medio`. A listagem aceita
 `status` com um dos seis nomes oficiais, `pagina` (padrão 1) e `tamanhoPagina`
-(padrão 20, máximo 100). Retorna total de OS, página e resumos ordenados pelas
-mais recentes. O detalhe mostra o histórico e os instantes de cada serviço.
+(padrão 20, máximo 100). O total e as páginas consideram a fila operacional na ordem
+`EmExecucao`, `AguardandoAprovacao`, `EmDiagnostico` e `Recebida`. Dentro de cada
+status, as mais antigas vêm primeiro, com desempate pelo número da OS.
+OS `Finalizada` e `Entregue` ficam no histórico acessível pelo detalhe.
+Filtrar a fila por um desses dois status retorna uma página vazia.
 Sem token a API responde `401`; um papel diferente de Administrador recebe `403`.
 
 O indicador agrupa as durações por serviço do catálogo e informa a média geral,

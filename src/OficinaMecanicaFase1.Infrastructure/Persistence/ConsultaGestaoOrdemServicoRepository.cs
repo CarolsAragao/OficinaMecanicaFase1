@@ -10,12 +10,20 @@ public sealed class ConsultaGestaoOrdemServicoRepository(OficinaDbContext db)
     public async Task<PaginaOrdensServico> ListarAsync(StatusOrdemServico? status,
         int pagina, int tamanhoPagina, CancellationToken cancelamento)
     {
-        var consulta = db.OrdensServico.AsNoTracking();
+        var consulta = db.OrdensServico.AsNoTracking()
+            .Where(ordem => ordem.Status == StatusOrdemServico.EmExecucao ||
+                ordem.Status == StatusOrdemServico.AguardandoAprovacao ||
+                ordem.Status == StatusOrdemServico.EmDiagnostico ||
+                ordem.Status == StatusOrdemServico.Recebida);
         if (status is not null) consulta = consulta.Where(ordem => ordem.Status == status);
 
         var total = await consulta.CountAsync(cancelamento);
-        var ordens = await consulta.OrderByDescending(ordem => ordem.CriadaEmUtc)
-            .ThenByDescending(ordem => ordem.Numero)
+        var ordens = await consulta
+            .OrderBy(ordem => ordem.Status == StatusOrdemServico.EmExecucao ? 0 :
+                ordem.Status == StatusOrdemServico.AguardandoAprovacao ? 1 :
+                ordem.Status == StatusOrdemServico.EmDiagnostico ? 2 : 3)
+            .ThenBy(ordem => ordem.CriadaEmUtc)
+            .ThenBy(ordem => ordem.Numero)
             .Skip((pagina - 1) * tamanhoPagina).Take(tamanhoPagina)
             .Select(ordem => new ResumoOrdemServico(ordem.Numero, ordem.ClienteId,
                 ordem.VeiculoId, ordem.Status, ordem.CriadaEmUtc, ordem.EntregueEmUtc,
