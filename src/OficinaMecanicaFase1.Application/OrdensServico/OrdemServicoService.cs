@@ -2,6 +2,7 @@ using OficinaMecanicaFase1.Application.Cadastros;
 using OficinaMecanicaFase1.Domain.OrdensServico;
 using OficinaMecanicaFase1.Domain.Orcamentos;
 using OficinaMecanicaFase1.Domain.Cadastros;
+using OficinaMecanicaFase1.Domain.Estoque;
 
 namespace OficinaMecanicaFase1.Application.OrdensServico;
 
@@ -34,10 +35,8 @@ public sealed class OrdemServicoService(
         foreach (var requisicao in itens)
         {
             var item = itensCatalogo[requisicao.ItemEstoqueId];
-            if (!item.QuantidadeValida(requisicao.Quantidade))
-                return Invalido<OrdemServico>(item.Tipo == Domain.Estoque.TipoItemEstoque.Peca
-                    ? "Peças exigem quantidade inteira e positiva."
-                    : "Insumos exigem quantidade positiva com até três casas decimais.", "quantidade");
+            var erroQuantidade = ValidarQuantidade(item, requisicao.Quantidade);
+            if (erroQuantidade is not null) return erroQuantidade;
             itensComDisponibilidade.Add((item.Id, requisicao.Quantidade, item.SaldoDisponivel));
         }
 
@@ -94,10 +93,8 @@ public sealed class OrdemServicoService(
         if (ordem is null) return NaoEncontrado<OrdemServico>();
         var itens = await repositorio.ObterItensAtivosAsync([itemId], cancelamento);
         if (!itens.TryGetValue(itemId, out var item)) return Invalido<OrdemServico>("O item não existe ou está inativo.", "itemEstoqueId");
-        if (!item.QuantidadeValida(quantidade))
-            return Invalido<OrdemServico>(item.Tipo == Domain.Estoque.TipoItemEstoque.Peca
-                ? "Peças exigem quantidade inteira e positiva."
-                : "Insumos exigem quantidade positiva com até três casas decimais.", "quantidade");
+        var erroQuantidade = ValidarQuantidade(item, quantidade);
+        if (erroQuantidade is not null) return erroQuantidade;
         try { repositorio.Adicionar(ordem.AdicionarItemNecessario(item.Id, quantidade, item.SaldoDisponivel)); }
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
@@ -164,6 +161,16 @@ public sealed class OrdemServicoService(
     {
         var ordem = await repositorio.ObterAsync(numero, cancelamento);
         return ordem is null ? null : await repositorio.ObterOrcamentoAsync(ordem.Id, cancelamento);
+    }
+
+    private static ResultadoOrdemServico<OrdemServico>? ValidarQuantidade(ItemEstoque item, decimal quantidade)
+    {
+        if (item.QuantidadeValida(quantidade)) return null;
+
+        var mensagem = item.Tipo == TipoItemEstoque.Peca
+            ? "Peças exigem quantidade inteira e positiva."
+            : "Insumos exigem quantidade positiva com até três casas decimais.";
+        return Invalido<OrdemServico>(mensagem, "quantidade");
     }
 
     private async Task<ResultadoOrdemServico<T>> SalvarAsync<T>(T valor, CancellationToken cancelamento)
