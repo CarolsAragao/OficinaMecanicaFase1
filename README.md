@@ -12,6 +12,7 @@ Este diretório é a raiz do **repositório do back-end** da oficina mecânica. 
 - `src/OficinaMecanicaFase1.Application`: coordenação dos casos de uso.
 - `src/OficinaMecanicaFase1.Domain`: regras e conceitos do domínio.
 - `src/OficinaMecanicaFase1.Infrastructure`: adaptações técnicas e persistência.
+- `src/OficinaMecanicaFase1.Infrastructure/DependencyInjection`: registro de DbContexts e repositórios SQL Server.
 - `tests/OficinaMecanicaFase1.Infrastructure.Tests`: integração com um SQL Server isolado por teste.
 - `docker-compose.yml`: API e SQL Server local com volume persistente.
 - `scripts/Configurar-Depuracao-Local.ps1`: conexão local do Visual Studio armazenada nos User Secrets.
@@ -47,7 +48,7 @@ Este desenho representa a **arquitetura da aplicação já implementada**. O dia
 
 ### Como a API HTTP está organizada
 
-Os endpoints ficam em classes na pasta `src/OficinaMecanicaFase1.Api/Controllers`, agrupadas por assunto e pelas etapas da ordem de serviço. Cada classe herda de `ControllerBase`: `[Route]` define o prefixo da URL, `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpPatch]` e `[HttpDelete]` indicam o método HTTP, e `[Authorize(Policy = "...")]` aplica a permissão necessária. O `Program.cs` chama `AddOficinaMecanica()` para registrar controllers, casos de uso, persistência, Identity, JWT e políticas; depois configura o pipeline HTTP com `MapControllers()`. O ponto de composição fica na API, enquanto `Infrastructure/Persistence/ServiceCollectionExtensions.cs` mantém os detalhes de registro do SQL Server e dos repositórios. Os corpos JSON usam os contratos em `Api/Contracts` e as ações chamam os serviços da camada Application; as regras do domínio não ficam nos controllers. Por exemplo, `ClientesController.CriarClienteAsync` atende `POST /api/clientes`, valida pelo caso de uso e retorna `201 Created` com o cliente cadastrado.
+Os endpoints ficam em classes na pasta `src/OficinaMecanicaFase1.Api/Controllers`, agrupadas por assunto e pelas etapas da ordem de serviço. Cada classe herda de `ControllerBase`: `[Route]` define o prefixo da URL, `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpPatch]` e `[HttpDelete]` indicam o método HTTP, e `[Authorize(Policy = "...")]` aplica a permissão necessária. O `Program.cs` chama `AddOficinaMecanica()` para registrar controllers, casos de uso, persistência, Identity, JWT e políticas; depois configura o pipeline HTTP com `MapControllers()`. O ponto de composição fica na API, enquanto `Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs` mantém os detalhes de registro do SQL Server e dos repositórios. Os corpos JSON usam os contratos em `Api/Contracts` e as ações chamam os serviços da camada Application; as regras do domínio não ficam nos controllers. Por exemplo, `ClientesController.CriarClienteAsync` atende `POST /api/clientes`, valida pelo caso de uso e retorna `201 Created` com o cliente cadastrado.
 
 ## Executar com Docker Compose
 

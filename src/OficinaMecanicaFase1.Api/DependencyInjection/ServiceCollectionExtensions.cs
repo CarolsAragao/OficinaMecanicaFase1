@@ -9,7 +9,7 @@ using OficinaMecanicaFase1.Application.Cadastros;
 using OficinaMecanicaFase1.Application.Catalogo;
 using OficinaMecanicaFase1.Application.OrdensServico;
 using OficinaMecanicaFase1.Infrastructure.Identity;
-using OficinaMecanicaFase1.Infrastructure.Persistence;
+using OficinaMecanicaFase1.Infrastructure.DependencyInjection;
 
 namespace OficinaMecanicaFase1.Api.DependencyInjection;
 
