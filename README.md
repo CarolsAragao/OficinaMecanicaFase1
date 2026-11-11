@@ -8,6 +8,7 @@ Este diretório é a raiz do **repositório do back-end** da oficina mecânica. 
 
 - `OficinaMecanicaFase1.slnx`: solução .NET 10.
 - `src/OficinaMecanicaFase1.Api`: interface HTTP, contratos de entrada/saída e OpenAPI.
+- `src/OficinaMecanicaFase1.Api/DependencyInjection`: ponto de composição dos serviços, autenticação e autorização.
 - `src/OficinaMecanicaFase1.Application`: coordenação dos casos de uso.
 - `src/OficinaMecanicaFase1.Domain`: regras e conceitos do domínio.
 - `src/OficinaMecanicaFase1.Infrastructure`: adaptações técnicas e persistência.
@@ -20,7 +21,7 @@ Todos os projetos pertencem ao mesmo back-end monolítico. As referências segue
 
 ### Como a API HTTP está organizada
 
-Os endpoints ficam em classes na pasta `src/OficinaMecanicaFase1.Api/Controllers`, agrupadas por assunto e pelas etapas da ordem de serviço. Cada classe herda de `ControllerBase`: `[Route]` define o prefixo da URL, `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpPatch]` e `[HttpDelete]` indicam o método HTTP, e `[Authorize(Policy = "...")]` aplica a permissão necessária. O `Program.cs` registra os controllers com `AddControllers()` e `MapControllers()`. Os corpos JSON usam os contratos em `Api/Contracts` e as ações chamam os serviços da camada Application; as regras do domínio não ficam nos controllers. Por exemplo, `ClientesController.CriarClienteAsync` atende `POST /api/clientes`, valida pelo caso de uso e retorna `201 Created` com o cliente cadastrado.
+Os endpoints ficam em classes na pasta `src/OficinaMecanicaFase1.Api/Controllers`, agrupadas por assunto e pelas etapas da ordem de serviço. Cada classe herda de `ControllerBase`: `[Route]` define o prefixo da URL, `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpPatch]` e `[HttpDelete]` indicam o método HTTP, e `[Authorize(Policy = "...")]` aplica a permissão necessária. O `Program.cs` chama `AddOficinaMecanica()` para registrar controllers, casos de uso, persistência, Identity, JWT e políticas; depois configura o pipeline HTTP com `MapControllers()`. O ponto de composição fica na API, enquanto `Infrastructure/Persistence/ServiceCollectionExtensions.cs` mantém os detalhes de registro do SQL Server e dos repositórios. Os corpos JSON usam os contratos em `Api/Contracts` e as ações chamam os serviços da camada Application; as regras do domínio não ficam nos controllers. Por exemplo, `ClientesController.CriarClienteAsync` atende `POST /api/clientes`, valida pelo caso de uso e retorna `201 Created` com o cliente cadastrado.
 
 ## Executar com Docker Compose
 
