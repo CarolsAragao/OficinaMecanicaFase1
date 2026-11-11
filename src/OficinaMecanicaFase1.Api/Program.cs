@@ -1,3 +1,4 @@
+using OficinaMecanicaFase1.Application.AcessoInterno;
 using OficinaMecanicaFase1.Application.Cadastros;
 using OficinaMecanicaFase1.Application.Catalogo;
 using OficinaMecanicaFase1.Application.OrdensServico;
@@ -34,8 +35,9 @@ builder.Services.AddScoped<AditivoService>();
 var jwt = ConfiguracaoJwt.Ler(builder.Configuration);
 builder.Services.AddSingleton(jwt);
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<EmissorJwt>();
-builder.Services.AddScoped<AcessoInterno>();
+builder.Services.AddSingleton<IEmissorTokenInterno, EmissorJwt>();
+builder.Services.AddScoped<IIdentidadeInterna, IdentidadeInternaAdapter>();
+builder.Services.AddScoped<AcessoInternoService>();
 
 builder.Services.AddIdentityCore<UsuarioInterno>(options =>
     {

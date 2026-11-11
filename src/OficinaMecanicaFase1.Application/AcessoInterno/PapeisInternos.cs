@@ -1,4 +1,4 @@
-namespace OficinaMecanicaFase1.Api.Security;
+namespace OficinaMecanicaFase1.Application.AcessoInterno;
 
 public static class PapeisInternos
 {

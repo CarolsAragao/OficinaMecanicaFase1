@@ -1,23 +1,23 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
-using OficinaMecanicaFase1.Infrastructure.Identity;
+using OficinaMecanicaFase1.Application.AcessoInterno;
 
 namespace OficinaMecanicaFase1.Api.Security;
 
-public sealed class EmissorJwt(ConfiguracaoJwt configuracao, TimeProvider tempo)
+public sealed class EmissorJwt(ConfiguracaoJwt configuracao, TimeProvider tempo) : IEmissorTokenInterno
 {
-    public TokenEmitido Emitir(UsuarioInterno usuario, IEnumerable<string> papeis)
+    public TokenInterno Emitir(UsuarioInternoDados usuario)
     {
         var agora = tempo.GetUtcNow();
         var vencimento = agora.AddMinutes(15);
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
-            new(JwtRegisteredClaimNames.UniqueName, usuario.UserName ?? string.Empty),
+            new(JwtRegisteredClaimNames.UniqueName, usuario.Nome),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))
         };
-        claims.AddRange(papeis.Select(papel => new Claim("role", papel)));
+        claims.AddRange(usuario.Papeis.Select(papel => new Claim("role", papel)));
 
         var token = new JwtSecurityToken(
             issuer: configuracao.Emissor,
@@ -27,8 +27,6 @@ public sealed class EmissorJwt(ConfiguracaoJwt configuracao, TimeProvider tempo)
             expires: vencimento.UtcDateTime,
             signingCredentials: new SigningCredentials(new SymmetricSecurityKey(configuracao.Chave), SecurityAlgorithms.HmacSha256));
 
-        return new TokenEmitido(new JwtSecurityTokenHandler().WriteToken(token), vencimento);
+        return new TokenInterno(new JwtSecurityTokenHandler().WriteToken(token), vencimento);
     }
 }
-
-public sealed record TokenEmitido(string Valor, DateTimeOffset ExpiraEmUtc);

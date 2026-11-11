@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using OficinaMecanicaFase1.Application.AcessoInterno;
 using OficinaMecanicaFase1.Infrastructure.Identity;
 
 namespace OficinaMecanicaFase1.Api.Security;
