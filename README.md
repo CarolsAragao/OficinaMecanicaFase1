@@ -46,6 +46,8 @@ Por exemplo, ao abrir uma OS, `OrdensServicoController` recebe os dados HTTP e c
 
 Este desenho representa a **arquitetura da aplicação já implementada**. O diagrama de infraestrutura da Fase 2 será completado com os recursos efetivamente escolhidos e provisionados em Kubernetes e Terraform e com o fluxo de deploy da pipeline.
 
+O teste `ArquiteturaTests` confere as dependências compiladas de `Domain` e `Application`: essas camadas não devem referenciar `Api`, `Infrastructure`, ASP.NET Core ou EF Core. Ele roda com os demais testes sem precisar de Docker.
+
 ### Como a API HTTP está organizada
 
 Os endpoints ficam em classes na pasta `src/OficinaMecanicaFase1.Api/Controllers`, agrupadas por assunto e pelas etapas da ordem de serviço. Cada classe herda de `ControllerBase`: `[Route]` define o prefixo da URL, `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpPatch]` e `[HttpDelete]` indicam o método HTTP, e `[Authorize(Policy = "...")]` aplica a permissão necessária. O `Program.cs` chama `AddOficinaMecanica()` para registrar controllers, casos de uso, persistência, Identity, JWT e políticas; depois configura o pipeline HTTP com `MapControllers()`. O ponto de composição fica na API, enquanto `Infrastructure/DependencyInjection/ServiceCollectionExtensions.cs` mantém os detalhes de registro do SQL Server e dos repositórios. Os corpos JSON usam os contratos em `Api/Contracts` e as ações chamam os serviços da camada Application; as regras do domínio não ficam nos controllers. Por exemplo, `ClientesController.CriarClienteAsync` atende `POST /api/clientes`, valida pelo caso de uso e retorna `201 Created` com o cliente cadastrado.
