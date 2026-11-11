@@ -228,7 +228,7 @@ Exemplo de corpo:
 | Método | Rota | Uso |
 | --- | --- | --- |
 | POST | `/api/ordens-servico` | Abrir OS como `Recebida`; exige Administrador ou Atendente. |
-| GET | `/api/ordens-servico/{numero}` | Consultar serviços, itens, status e histórico da OS. |
+| GET | `/api/ordens-servico/{numero}` | Consultar serviços, itens, status e o campo `historico` da OS. |
 | POST | `/api/ordens-servico/{numero}/servicos` | Acrescentar serviço ativo antes da aprovação do orçamento; exige Atendente ou Mecânico. Corpo: `{"servicoCatalogoId":"GUID"}`. |
 | POST | `/api/ordens-servico/{numero}/itens` | Acrescentar item ativo e consultar sua disponibilidade; exige Atendente ou Mecânico. Corpo: `{"itemEstoqueId":"GUID","quantidade":1}`. |
 | POST | `/api/ordens-servico/{numero}/diagnostico/inicio` | Mecânico inicia o diagnóstico e muda a OS para `EmDiagnostico`. |
