@@ -19,6 +19,32 @@ Este diretório é a raiz do **repositório do back-end** da oficina mecânica. 
 
 Todos os projetos pertencem ao mesmo back-end monolítico. As referências seguem `Api → Application`, `Api → Infrastructure`, `Infrastructure → Application` e `Application → Domain`. Os contextos DDD são limites de linguagem e responsabilidade dentro do monólito.
 
+## Arquitetura Limpa — evolução da Fase 2
+
+A abordagem escolhida para a evolução da aplicação é **Arquitetura Limpa**. O sistema continua como um único back-end, organizado em quatro projetos. As regras da oficina ficam no centro; HTTP, banco de dados e autenticação são detalhes externos. Os contextos descritos na [documentação DDD](docs/index.html) orientam os nomes e as responsabilidades do domínio, sem exigir a criação de serviços separados.
+
+| Projeto | Responsabilidade | Exemplos no código |
+| --- | --- | --- |
+| `Domain` | Define entidades, estados e regras de negócio da oficina. | `OrdemServico`, `StatusOrdemServico`, `Orcamento`. |
+| `Application` | Coordena casos de uso e declara as interfaces necessárias para acessar recursos externos. | `OrdemServicoService`, `AcessoInternoService`, `IOrdemServicoRepository`, `IIdentidadeInterna`. |
+| `Infrastructure` | Implementa as interfaces da aplicação e integra SQL Server, EF Core e ASP.NET Identity. | `OrdemServicoRepository`, `OficinaDbContext`, `IdentidadeInternaAdapter`. |
+| `Api` | Recebe e responde HTTP, configura autenticação/autorização e conecta os serviços na inicialização. | Controllers, contratos HTTP, `Program.cs`, `DependencyInjection/ServiceCollectionExtensions.cs`. |
+
+As **setas contínuas** mostram dependências de código entre projetos, conforme os arquivos `.csproj`. A seta pontilhada mostra o ponto de composição: a API conhece a infraestrutura para registrar as implementações das interfaces da aplicação. A ligação com SQL Server representa uma integração externa, não uma dependência das camadas internas.
+
+```mermaid
+flowchart LR
+    API["Api<br/>HTTP e composição"] --> APP["Application<br/>casos de uso e interfaces"]
+    APP --> DOMAIN["Domain<br/>regras da oficina"]
+    INFRA["Infrastructure<br/>EF Core, Identity e repositórios"] --> APP
+    API -. "registra implementações" .-> INFRA
+    INFRA -. "persiste dados" .-> SQL[(SQL Server)]
+```
+
+Por exemplo, ao abrir uma OS, `OrdensServicoController` recebe os dados HTTP e chama `OrdemServicoService`. O serviço aplica o caso de uso com as regras de `OrdemServico` e acessa dados pela interface `IOrdemServicoRepository`; `OrdemServicoRepository` implementa essa interface usando o banco. O fluxo da requisição atravessa essas peças, enquanto as dependências de código continuam apontando para as camadas internas.
+
+Este desenho representa a **arquitetura da aplicação já implementada**. O diagrama de infraestrutura da Fase 2 será completado com os recursos efetivamente escolhidos e provisionados em Kubernetes e Terraform e com o fluxo de deploy da pipeline.
+
 ### Como a API HTTP está organizada
 
 Os endpoints ficam em classes na pasta `src/OficinaMecanicaFase1.Api/Controllers`, agrupadas por assunto e pelas etapas da ordem de serviço. Cada classe herda de `ControllerBase`: `[Route]` define o prefixo da URL, `[HttpGet]`, `[HttpPost]`, `[HttpPut]`, `[HttpPatch]` e `[HttpDelete]` indicam o método HTTP, e `[Authorize(Policy = "...")]` aplica a permissão necessária. O `Program.cs` chama `AddOficinaMecanica()` para registrar controllers, casos de uso, persistência, Identity, JWT e políticas; depois configura o pipeline HTTP com `MapControllers()`. O ponto de composição fica na API, enquanto `Infrastructure/Persistence/ServiceCollectionExtensions.cs` mantém os detalhes de registro do SQL Server e dos repositórios. Os corpos JSON usam os contratos em `Api/Contracts` e as ações chamam os serviços da camada Application; as regras do domínio não ficam nos controllers. Por exemplo, `ClientesController.CriarClienteAsync` atende `POST /api/clientes`, valida pelo caso de uso e retorna `201 Created` com o cliente cadastrado.
