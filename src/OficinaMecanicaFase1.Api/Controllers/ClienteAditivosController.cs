@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OficinaMecanicaFase1.Api.OrdensServico;
 using OficinaMecanicaFase1.Application.OrdensServico;
-using OficinaMecanicaFase1.Domain.Orcamentos;
-using System.Security.Claims;
 
 namespace OficinaMecanicaFase1.Api.Controllers;
 
@@ -43,15 +41,6 @@ public sealed class ClienteAditivosController : OficinaControllerBase
             entrada.CodigoAcesso, entrada.Aprovar, entrada.Motivo, ct);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Ok(AditivoResponse.De((await _aditivoService.ConsultarInternoAsync(numero, aditivoId, ct))!, numero))
-            : Erro(resultado);
+            : ResponderErroOrdemServico(resultado, "aditivo", null);
     }
-
-    private IActionResult Erro(ResultadoOrdemServico<Aditivo> resultado) => resultado.Erro switch
-    {
-        ErroOrdemServico.NaoEncontrado => NotFound(),
-        ErroOrdemServico.Invalido => RespostaValidacao(new Dictionary<string, string[]>
-            { [resultado.Campo ?? "aditivo"] = [resultado.Mensagem ?? "Dados inválidos."] }),
-        ErroOrdemServico.Conflito => Problem(resultado.Mensagem, statusCode: 409),
-        _ => Problem(statusCode: 500)
-    };
 }

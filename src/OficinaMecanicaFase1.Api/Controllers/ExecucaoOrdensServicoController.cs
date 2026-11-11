@@ -55,7 +55,7 @@ public sealed class ExecucaoOrdensServicoController : OficinaControllerBase
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var mecanicoId)) return Forbid();
         var resultado = await _execucaoOrdemServicoService.IniciarExecucaoAsync(numero, mecanicoId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
-            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErroOrdemServico(resultado);
     }
 
     [HttpPost("{numero:long}/servicos/{servicoId:guid}/inicio", Name = "IniciarServicoOrdemServico")]
@@ -71,7 +71,7 @@ public sealed class ExecucaoOrdensServicoController : OficinaControllerBase
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var mecanicoId)) return Forbid();
         var resultado = await _execucaoOrdemServicoService.IniciarServicoAsync(numero, servicoId, mecanicoId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
-            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErroOrdemServico(resultado);
     }
 
     [HttpPost("{numero:long}/servicos/{servicoId:guid}/conclusao", Name = "ConcluirServicoOrdemServico")]
@@ -87,7 +87,7 @@ public sealed class ExecucaoOrdensServicoController : OficinaControllerBase
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var mecanicoId)) return Forbid();
         var resultado = await _execucaoOrdemServicoService.ConcluirServicoAsync(numero, servicoId, mecanicoId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
-            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErroOrdemServico(resultado);
     }
 
     [HttpPost("{numero:long}/consumos", Name = "RegistrarConsumoRealOrdemServico")]
@@ -106,17 +106,7 @@ public sealed class ExecucaoOrdensServicoController : OficinaControllerBase
         var resultado = await _execucaoOrdemServicoService.RegistrarConsumoAsync(numero, mecanicoId,
             consumos.Select(item => new ConsumoSolicitado(item.ItemEstoqueId, item.Quantidade)).ToArray(), cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
-            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErroOrdemServico(resultado);
     }
 
-    private IActionResult ResponderErro<T>(ResultadoOrdemServico<T> resultado) => resultado.Erro switch
-    {
-        ErroOrdemServico.Invalido => RespostaValidacao(new Dictionary<string, string[]>
-        {
-            [resultado.Campo ?? "ordemServico"] = [resultado.Mensagem ?? "Dados inválidos."]
-        }),
-        ErroOrdemServico.NaoEncontrado => NotFound(),
-        ErroOrdemServico.Conflito => Problem(resultado.Mensagem, statusCode: 409),
-        _ => Problem("Não foi possível processar a ordem de serviço.", statusCode: 500)
-    };
 }

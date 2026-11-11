@@ -37,7 +37,7 @@ public sealed class OrdensServicoController : OficinaControllerBase
         var resultado = await _ordemServicoService.CriarAsync(comando, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Created($"/api/ordens-servico/{resultado.Valor!.Numero}", OrdemServicoResponse.De(resultado.Valor))
-            : ResponderErro(resultado);
+            : ResponderErroOrdemServico(resultado);
     }
 
     [HttpGet("{numero:long}", Name = "ObterOrdemServico")]
@@ -65,7 +65,7 @@ public sealed class OrdensServicoController : OficinaControllerBase
         if (!Guid.TryParse(User.FindFirst("sub")?.Value, out var atendenteId)) return Forbid();
         var resultado = await _ordemServicoService.EntregarAsync(numero, atendenteId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
-            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErroOrdemServico(resultado);
     }
 
     [HttpPost("{numero:long}/servicos", Name = "AdicionarServicoSolicitado")]
@@ -81,7 +81,7 @@ public sealed class OrdensServicoController : OficinaControllerBase
     {
         var resultado = await _ordemServicoService.AdicionarServicoAsync(numero, entrada.ServicoCatalogoId, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
-            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErroOrdemServico(resultado);
     }
 
     [HttpPost("{numero:long}/itens", Name = "AdicionarItemNecessario")]
@@ -98,17 +98,7 @@ public sealed class OrdensServicoController : OficinaControllerBase
         var resultado = await _ordemServicoService.AdicionarItemAsync(
             numero, entrada.ItemEstoqueId, entrada.Quantidade, cancelamento);
         return resultado.Erro == ErroOrdemServico.Nenhum
-            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErro(resultado);
+            ? Ok(OrdemServicoResponse.De(resultado.Valor!)) : ResponderErroOrdemServico(resultado);
     }
 
-    private IActionResult ResponderErro<T>(ResultadoOrdemServico<T> resultado) => resultado.Erro switch
-    {
-        ErroOrdemServico.Invalido => RespostaValidacao(new Dictionary<string, string[]>
-        {
-            [resultado.Campo ?? "ordemServico"] = [resultado.Mensagem ?? "Dados inválidos."]
-        }),
-        ErroOrdemServico.NaoEncontrado => NotFound(),
-        ErroOrdemServico.Conflito => Problem(resultado.Mensagem, statusCode: 409),
-        _ => Problem("Não foi possível processar a ordem de serviço.", statusCode: 500)
-    };
 }

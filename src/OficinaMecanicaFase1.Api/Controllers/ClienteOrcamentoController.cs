@@ -43,17 +43,9 @@ public sealed class ClienteOrcamentoController : OficinaControllerBase
         HttpContext.Response.Headers.CacheControl = "no-store";
         var resultado = await _decisaoOrcamentoService.DecidirAsync(numero, entrada.Documento, entrada.CodigoAcesso,
             entrada.Aprovar, entrada.Motivo, cancelamento);
-        return resultado.Erro switch
-        {
-            ErroOrdemServico.Nenhum => Ok(OrcamentoResponse.De(resultado.Valor!, numero)),
-            ErroOrdemServico.NaoEncontrado => NotFound(),
-            ErroOrdemServico.Invalido => RespostaValidacao(new Dictionary<string, string[]>
-            {
-                [resultado.Campo ?? "decisao"] = [resultado.Mensagem ?? "Dados inválidos."]
-            }),
-            ErroOrdemServico.Conflito => Problem(resultado.Mensagem, statusCode: 409),
-            _ => Problem("Não foi possível registrar a decisão.", statusCode: 500)
-        };
+        return resultado.Erro == ErroOrdemServico.Nenhum
+            ? Ok(OrcamentoResponse.De(resultado.Valor!, numero))
+            : ResponderErroOrdemServico(resultado, "decisao", "Não foi possível registrar a decisão.");
     }
 
     [HttpPost("{numero:long}/andamento/consulta", Name = "ConsultarAndamentoCliente")]

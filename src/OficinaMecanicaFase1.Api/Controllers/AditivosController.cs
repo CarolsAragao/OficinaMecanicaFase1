@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using OficinaMecanicaFase1.Api.OrdensServico;
 using OficinaMecanicaFase1.Application.OrdensServico;
-using OficinaMecanicaFase1.Domain.Orcamentos;
-using System.Security.Claims;
 
 namespace OficinaMecanicaFase1.Api.Controllers;
 
@@ -36,7 +34,7 @@ public sealed class AditivosController : OficinaControllerBase
             entrada.OriginalPodeProsseguir, ct);
         return resultado.Erro == ErroOrdemServico.Nenhum
             ? Created($"/api/ordens-servico/{numero}/aditivos/{resultado.Valor!.Id}",
-                AditivoResponse.De(resultado.Valor, numero)) : Erro(resultado);
+                AditivoResponse.De(resultado.Valor, numero)) : ResponderErroOrdemServico(resultado, "aditivo", null);
     }
 
     [HttpGet("{aditivoId:guid}")]
@@ -56,15 +54,6 @@ public sealed class AditivosController : OficinaControllerBase
     {
         var resultado = await _aditivoService.TentarReservaAsync(numero, aditivoId, ct);
         return resultado.Erro == ErroOrdemServico.Nenhum
-            ? Ok(AditivoResponse.De(resultado.Valor!, numero)) : Erro(resultado);
+            ? Ok(AditivoResponse.De(resultado.Valor!, numero)) : ResponderErroOrdemServico(resultado, "aditivo", null);
     }
-
-    private IActionResult Erro(ResultadoOrdemServico<Aditivo> resultado) => resultado.Erro switch
-    {
-        ErroOrdemServico.NaoEncontrado => NotFound(),
-        ErroOrdemServico.Invalido => RespostaValidacao(new Dictionary<string, string[]>
-            { [resultado.Campo ?? "aditivo"] = [resultado.Mensagem ?? "Dados inválidos."] }),
-        ErroOrdemServico.Conflito => Problem(resultado.Mensagem, statusCode: 409),
-        _ => Problem(statusCode: 500)
-    };
 }
