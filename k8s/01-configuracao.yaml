@@ -1,0 +1,9 @@
+apiVersion: v1 # Versão da API dos recursos básicos.
+kind: ConfigMap # Guarda configurações que podem ser lidas sem credenciais.
+metadata: # Identifica o objeto.
+  name: oficina-config # Nome usado pelos contêineres que leem a configuração.
+data: # Pares de chave e valor, sempre em texto.
+  ASPNETCORE_ENVIRONMENT: Development # Habilita o Swagger no ambiente local.
+  ASPNETCORE_URLS: http://+:8080 # Faz a API ouvir na porta 8080 em todas as interfaces do Pod.
+  ACCEPT_EULA: "Y" # Aceita os termos da imagem do SQL Server.
+  MSSQL_PID: Developer # Usa a edição de desenvolvimento do SQL Server.

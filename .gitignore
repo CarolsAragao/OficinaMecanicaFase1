@@ -18,3 +18,7 @@ secrets/
 
 *.log
 *.tmp
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan

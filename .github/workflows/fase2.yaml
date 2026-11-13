@@ -1,0 +1,61 @@
+name: Fase 2 # Nome exibido no GitHub Actions.
+on: [push, pull_request, workflow_dispatch] # Valida mudanças e permite execução manual.
+permissions: # Controla o token fornecido ao workflow.
+  contents: read # Permite baixar o código.
+jobs: # Lista as tarefas executadas pelo workflow.
+  validar: # Identificador da tarefa de validação.
+    runs-on: ubuntu-latest # Usa um runner Linux hospedado pelo GitHub.
+    steps: # Executa estas etapas na ordem declarada.
+      - name: Baixar código # Obtém a revisão que disparou o workflow.
+        uses: actions/checkout@v4 # Ação oficial para obter os arquivos do repositório.
+      - name: Instalar .NET # Configura o SDK usado no build e nos testes.
+        uses: actions/setup-dotnet@v4 # Ação oficial para instalar o SDK.
+        with: # Parâmetros da ação.
+          dotnet-version: '10.0.x' # Versão usada pelo Dockerfile.
+      - name: Compilar # Compila também o projeto de testes.
+        run: dotnet build --configuration Release # Restaura as dependências e gera os binários.
+      - name: Rodar testes # Executa os testes automatizados.
+        run: dotnet test --configuration Release --no-build # Reusa o resultado do build.
+      - name: Criar imagem # Empacota a API como contêiner.
+        run: docker build -t oficina-api:local . # Usa o Dockerfile do repositório.
+      - name: Instalar Terraform # Configura a ferramenta de provisionamento.
+        uses: hashicorp/setup-terraform@v3 # Ação mantida pela HashiCorp.
+        with: # Parâmetros da ação.
+          terraform_version: '1.11.4' # Fixa a versão usada no runner.
+      - name: Instalar kind e kubectl # Instala os clientes usados pelos scripts.
+        run: | # Bloco de comandos Bash.
+          curl -fsSLo /tmp/kind https://kind.sigs.k8s.io/dl/v0.29.0/kind-linux-amd64 # Baixa o kind para Linux x64.
+          sudo install /tmp/kind /usr/local/bin/kind # Coloca o binário no PATH.
+          curl -fsSLo /tmp/kubectl https://dl.k8s.io/release/v1.33.1/bin/linux/amd64/kubectl # Baixa o cliente Kubernetes.
+          sudo install /tmp/kubectl /usr/local/bin/kubectl # Coloca o cliente no PATH.
+      - name: Provisionar cluster e banco # Cria o ambiente de validação da execução.
+        run: | # Executa o Terraform na pasta de infraestrutura.
+          terraform -chdir=infra init # Inicializa o diretório de trabalho.
+          terraform -chdir=infra apply -auto-approve # Cria o cluster e aplica os manifestos do SQL Server.
+          kind load docker-image oficina-api:local --name oficina # Torna a imagem disponível dentro do nó.
+      - name: Criar credenciais temporárias # Gera credenciais exclusivas para esta execução.
+        shell: pwsh # Usa PowerShell para reaproveitar o script local.
+        run: | # Mantém as credenciais no processo deste passo.
+          $env:MSSQL_SA_PASSWORD = 'Sql!aA1-' + [Guid]::NewGuid().ToString('N') # Gera a senha do banco.
+          $env:JWT_SIGNING_KEY = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)) # Gera a chave JWT no formato esperado pela API.
+          $env:BOOTSTRAP_ADMIN_EMAIL = 'admin@example.test' # Define a conta de demonstração.
+          $env:BOOTSTRAP_ADMIN_PASSWORD = 'Admin!aA1-' + [Guid]::NewGuid().ToString('N') # Gera a senha da conta.
+          ./k8s/Criar-Secrets.ps1 # Envia os Secrets ao cluster da execução.
+      - name: Implantar e testar # Usa os mesmos manifestos do ambiente local.
+        run: | # Interrompe a implantação se o banco ou a migração falhar.
+          kubectl rollout status deployment/sqlserver --timeout=300s # Espera o SQL Server aceitar consultas.
+          kubectl apply -f k8s/03-migracao.yaml # Executa a preparação do banco.
+          kubectl wait --for=condition=complete job/oficina-migracao --timeout=300s # Aguarda a migração.
+          kubectl apply -f k8s/04-api.yaml # Publica os Pods e o Service.
+          kubectl rollout status deployment/oficina-api --timeout=300s # Espera a API alcançar o banco.
+          pwsh -File k8s/Instalar-Metricas.ps1 # Instala a fonte de métricas.
+          kubectl apply -f k8s/05-escala.yaml # Aplica o autoscaler.
+          kubectl wait --for=condition=Available apiservice/v1beta1.metrics.k8s.io --timeout=120s # Confirma o registro das métricas.
+          kubectl port-forward service/oficina-api 5080:80 & # Abre uma porta local no runner.
+          curl --fail --silent --show-error --retry 10 --retry-delay 2 --retry-all-errors --max-time 5 http://127.0.0.1:5080/api/saude/banco # Aguarda o túnel e exige resposta HTTP 2xx.
+      - name: Coletar diagnóstico em caso de falha # Preserva evidências no log do GitHub Actions.
+        if: failure() # Executa somente após falha.
+        run: | # Coleta o estado de cada componente, quando disponível.
+          kubectl get pods,svc,pvc,jobs,hpa -o wide || true # Exibe o estado dos recursos.
+          kubectl logs job/oficina-migracao --tail=60 || true # Exibe os logs da migração.
+          kubectl logs deployment/sqlserver --tail=60 || true # Exibe os logs do banco.

@@ -1,0 +1,61 @@
+apiVersion: apps/v1 # Versão da API de Deployments.
+kind: Deployment # Cria e substitui os Pods que executam a API.
+metadata: # Identifica o Deployment.
+  name: oficina-api # Nome usado pelo HPA e nos comandos de diagnóstico.
+spec: # Define como manter os Pods da API.
+  selector: # Encontra os Pods controlados pelo Deployment.
+    matchLabels: # Rótulos que precisam coincidir.
+      app: oficina-api # Mesmo rótulo usado no template e no Service.
+  template: # Modelo de cada Pod da API.
+    metadata: # Define os rótulos do Pod.
+      labels: # Rótulos usados pelos seletores.
+        app: oficina-api # Identifica os Pods da API.
+    spec: # Define o conteúdo do Pod.
+      containers: # Lista os contêineres da aplicação.
+        - name: api # Nome usado para consultar os logs.
+          image: oficina-api:local # Imagem carregada no cluster local.
+          imagePullPolicy: Never # Usa somente a imagem já carregada no nó.
+          envFrom: # Importa configurações e credenciais como variáveis de ambiente.
+            - configMapRef: # Seleciona a configuração pública.
+                name: oficina-config # Define o ambiente e a porta do ASP.NET Core.
+          env: # Define o modo de inicialização desta execução.
+            - name: ConnectionStrings__Oficina # Configura a conexão do .NET com o SQL Server.
+              valueFrom: # Lê o valor de um recurso externo.
+                secretKeyRef: # Seleciona uma chave de um Secret.
+                  name: oficina-api-secret # Secret criado na etapa de configuração.
+                  key: ConnectionStrings__Oficina # Chave que contém a conexão.
+            - name: Jwt__SigningKey # Configura a assinatura e a validação de tokens.
+              valueFrom: # Lê o valor de um recurso externo.
+                secretKeyRef: # Seleciona uma chave de um Secret.
+                  name: oficina-api-secret # Mesmo Secret usado para a conexão.
+                  key: Jwt__SigningKey # Chave que contém o material de assinatura.
+            - name: Banco__Inicializacao # Mapeia a configuração de inicialização do .NET.
+              value: Externa # Delega a migração ao Job.
+          ports: # Declara as portas do contêiner.
+            - name: http # Nome usado pelas sondas e pelo Service.
+              containerPort: 8080 # Porta em que a API atende.
+          resources: # Define a referência de CPU e memória para o HPA.
+            requests: # Valores reservados pelo agendador e usados no cálculo da utilização.
+              cpu: 100m # Reserva um décimo de núcleo.
+              memory: 256Mi # Reserva 256 MiB de memória.
+          readinessProbe: # Verifica se o Pod pode receber tráfego.
+            httpGet: # Faz uma requisição HTTP ao Pod.
+              path: /api/saude/banco # Responde com sucesso quando a API alcança o banco.
+              port: http # Usa a porta nomeada do contêiner.
+            timeoutSeconds: 3 # Limita cada verificação a três segundos.
+          livenessProbe: # Detecta quando o processo da API deixa de responder.
+            httpGet: # Faz uma requisição HTTP ao Pod.
+              path: /api/saude # Testa o processo sem depender do banco.
+              port: http # Usa a porta nomeada do contêiner.
+            initialDelaySeconds: 10 # Dá tempo para iniciar antes do primeiro teste.
+--- # Separa o Deployment do Service.
+apiVersion: v1 # Versão da API de Services.
+kind: Service # Dá à API um endereço interno estável.
+metadata: # Identifica o Service.
+  name: oficina-api # Nome DNS usado dentro do cluster.
+spec: # Define quem recebe o tráfego.
+  selector: # Seleciona os Pods da API.
+    app: oficina-api # Deve coincidir com o rótulo no template do Deployment.
+  ports: # Declara as portas do Service.
+    - port: 80 # Porta usada pelos clientes dentro do cluster.
+      targetPort: http # Encaminha para a porta http de um Pod pronto.

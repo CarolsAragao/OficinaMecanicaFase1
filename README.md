@@ -1,8 +1,16 @@
-# Oficina Mecânica — Fase 1
+# Oficina Mecânica — Fases 1 e 2
 
 Este diretório é a raiz do **repositório do back-end** da oficina mecânica. A documentação DDD usada na implementação também está publicada em [`docs/ddd`](docs/ddd), com índice de navegação em [`docs/index.html`](docs/index.html).
 
 **Grupo:** Torque & Domínio — Tech Challenge. A [documentação DDD](docs/index.html) e o [relatório de vulnerabilidades](docs/relatorio-vulnerabilidades.md) compõem a entrega da Fase 1.
+
+## Infraestrutura da Fase 2
+
+A Fase 2 usa o mesmo back-end e a mesma imagem Docker para execução local e em Kubernetes. O objetivo é automatizar o provisionamento e a implantação do SQL Server e da API e permitir que a API ganhe réplicas conforme o consumo de CPU e memória.
+
+- [Guia de Kubernetes](k8s/README.md) com desenho da arquitetura, provisionamento com Terraform, implantação e testes por etapa.
+- [Pipeline da Fase 2](.github/workflows/fase2.yaml) com build, testes e implantação em um cluster temporário do GitHub Actions.
+- [Swagger](http://localhost:5080/swagger) e [OpenAPI JSON](http://localhost:5080/openapi/v1.json) disponíveis com o ambiente de demonstração em execução.
 
 ## Estrutura
 

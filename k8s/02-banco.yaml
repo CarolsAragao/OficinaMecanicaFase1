@@ -1,0 +1,71 @@
+apiVersion: v1 # Versão da API do pedido de armazenamento.
+kind: PersistentVolumeClaim # Pede um volume para os arquivos do SQL Server.
+metadata: # Identifica o pedido.
+  name: sqlserver-dados # Nome usado pelo Deployment do banco.
+spec: # Define as características do armazenamento.
+  accessModes: # Define os modos de montagem aceitos.
+    - ReadWriteOnce # Permite leitura e escrita por um nó de cada vez.
+  resources: # Define o tamanho solicitado.
+    requests: # Capacidade mínima do volume.
+      storage: 5Gi # Usa a classe de armazenamento padrão do cluster.
+--- # Separa dois recursos no mesmo arquivo.
+apiVersion: v1 # Versão da API de Services.
+kind: Service # Dá um endereço estável ao banco dentro do cluster.
+metadata: # Identifica o Service.
+  name: sqlserver # Nome DNS usado pela API na conexão.
+spec: # Define o destino e a porta.
+  selector: # Encontra os Pods por rótulo.
+    app: sqlserver # Deve coincidir com o rótulo do Pod abaixo.
+  ports: # Declara portas acessíveis pelo Service.
+    - port: 1433 # Porta usada pelos clientes do banco.
+      targetPort: 1433 # Porta em que o SQL Server atende no Pod.
+--- # Separa o Service do Deployment.
+apiVersion: apps/v1 # Versão da API de Deployments.
+kind: Deployment # Mantém uma instância do banco em execução.
+metadata: # Identifica o Deployment.
+  name: sqlserver # Nome usado para acompanhar a inicialização.
+spec: # Define como o Pod será mantido.
+  replicas: 1 # Usa uma instância do SQL Server.
+  strategy: # Define como o Pod será substituído.
+    type: Recreate # Encerra o Pod antigo antes de o novo montar o volume.
+  selector: # Identifica os Pods controlados por este Deployment.
+    matchLabels: # Rótulos que precisam coincidir.
+      app: sqlserver # Mesmo rótulo do template e do Service.
+  template: # Modelo do Pod que será criado.
+    metadata: # Define os rótulos do Pod.
+      labels: # Rótulos usados por seletores.
+        app: sqlserver # Vincula o Pod ao Deployment e ao Service.
+    spec: # Define o conteúdo do Pod.
+      securityContext: # Ajusta as permissões do volume.
+        fsGroup: 10001 # Dá ao grupo do SQL Server acesso de escrita ao volume.
+      containers: # Lista os contêineres do Pod.
+        - name: sqlserver # Nome do contêiner para logs.
+          image: mcr.microsoft.com/mssql/server:2022-latest # Mesma imagem do Compose.
+          envFrom: # Carrega a configuração do banco.
+            - configMapRef: # Seleciona o ConfigMap de origem.
+                name: oficina-config # Contém a edição e a aceitação dos termos.
+          env: # Carrega a credencial somente para o banco.
+            - name: MSSQL_SA_PASSWORD # Variável esperada pela imagem oficial.
+              valueFrom: # Lê o valor de outro recurso.
+                secretKeyRef: # Seleciona uma chave de um Secret.
+                  name: sqlserver-secret # Secret criado no passo de configuração.
+                  key: MSSQL_SA_PASSWORD # Chave que contém a senha.
+          resources: # Define a reserva usada no agendamento do Pod.
+            requests: # Recursos que o nó precisa ter disponíveis.
+              memory: 2Gi # Memória mínima reservada para o SQL Server.
+              cpu: 500m # Reserva meio núcleo de CPU.
+          readinessProbe: # Só disponibiliza o banco quando ele executa uma consulta.
+            exec: # Executa o teste dentro do contêiner.
+              command: # Argumentos do teste.
+                - /bin/sh # Interpreta a variável de senha do contêiner.
+                - -c # Executa o próximo argumento como comando.
+                - 'SQLCMDPASSWORD="$MSSQL_SA_PASSWORD" /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -No -b -Q "SELECT 1" >/dev/null' # Consulta simples sem imprimir a senha.
+            periodSeconds: 5 # Repete a consulta a cada cinco segundos.
+            timeoutSeconds: 5 # Limita o tempo de cada tentativa.
+          volumeMounts: # Liga o armazenamento ao contêiner.
+            - name: dados # Aponta para o volume declarado abaixo.
+              mountPath: /var/opt/mssql # Diretório de dados usado pela imagem.
+      volumes: # Define o armazenamento disponível no Pod.
+        - name: dados # Nome usado na montagem.
+          persistentVolumeClaim: # Usa o volume associado ao pedido acima.
+            claimName: sqlserver-dados # Nome do pedido de armazenamento.

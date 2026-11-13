@@ -1,0 +1,20 @@
+apiVersion: batch/v1 # Versão da API de Jobs.
+kind: Job # Executa uma tarefa finita até concluir.
+metadata: # Identifica o Job.
+  name: oficina-migracao # Nome usado para verificar o resultado.
+spec: # Define a execução da tarefa.
+  backoffLimit: 2 # Permite até duas novas tentativas após falhas.
+  activeDeadlineSeconds: 300 # Limita o tempo total de execução.
+  template: # Modelo do Pod usado pelo Job.
+    spec: # Define o conteúdo e o comportamento do Pod.
+      restartPolicy: Never # O Job cria outro Pod se precisar tentar de novo.
+      containers: # Lista os contêineres da tarefa.
+        - name: migracao # Nome do contêiner que prepara o banco.
+          image: oficina-api:local # Reusa a imagem da API carregada no cluster.
+          imagePullPolicy: Never # Usa somente a imagem já carregada no nó.
+          envFrom: # Importa as credenciais necessárias para a inicialização.
+            - secretRef: # Seleciona o Secret de origem.
+                name: oficina-api-secret # Contém conexão, JWT e bootstrap do administrador.
+          env: # Personaliza o modo de execução deste contêiner.
+            - name: Banco__Inicializacao # Mapeia a configuração Banco:Inicializacao do .NET.
+              value: SomentePreparar # Aplica as migrações e sai sem iniciar o servidor HTTP.
