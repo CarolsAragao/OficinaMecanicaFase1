@@ -33,6 +33,10 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         .HasMaxLength(14)
                         .HasColumnType("nvarchar(14)");
 
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -582,33 +586,6 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.MarcoOrdemServico", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Descricao")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<Guid>("OrdemServicoId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("RegistradoEmUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrdemServicoId", "RegistradoEmUtc");
-
-                    b.ToTable("MarcosOrdemServico", (string)null);
-                });
-
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", b =>
                 {
                     b.Property<Guid>("Id")
@@ -713,6 +690,33 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
 
                             t.HasCheckConstraint("CK_OrdensServico_Status", "[Status] BETWEEN 1 AND 6");
                         });
+                });
+
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.RegistroHistoricoOrdemServico", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrdemServicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("RegistradoEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrdemServicoId", "RegistradoEmUtc");
+
+                    b.ToTable("MarcosOrdemServico", (string)null);
                 });
 
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.ServicoSolicitado", b =>
@@ -892,15 +896,6 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.MarcoOrdemServico", b =>
-                {
-                    b.HasOne("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", null)
-                        .WithMany("Marcos")
-                        .HasForeignKey("OrdemServicoId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", b =>
                 {
                     b.HasOne("OficinaMecanicaFase1.Domain.Cadastros.Cliente", null)
@@ -913,6 +908,15 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("VeiculoId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.RegistroHistoricoOrdemServico", b =>
+                {
+                    b.HasOne("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", null)
+                        .WithMany("Historico")
+                        .HasForeignKey("OrdemServicoId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -938,9 +942,9 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", b =>
                 {
-                    b.Navigation("ItensNecessarios");
+                    b.Navigation("Historico");
 
-                    b.Navigation("Marcos");
+                    b.Navigation("ItensNecessarios");
 
                     b.Navigation("ServicosSolicitados");
                 });

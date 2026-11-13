@@ -38,6 +38,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.HasKey(cliente => cliente.Id);
             entity.Property(cliente => cliente.Nome).HasMaxLength(200).IsRequired();
             entity.Property(cliente => cliente.Documento).HasMaxLength(14).IsRequired();
+            entity.Property(cliente => cliente.Email).HasMaxLength(254);
             entity.HasIndex(cliente => cliente.Documento).IsUnique();
         });
 

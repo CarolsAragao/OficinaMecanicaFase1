@@ -52,7 +52,7 @@ public sealed class ClientesController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> CriarClienteAsync([FromBody] ClienteRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _cadastroService.CriarClienteAsync(entrada.Nome, entrada.Documento, cancelamento);
+        var resultado = await _cadastroService.CriarClienteAsync(entrada.Nome, entrada.Documento, entrada.Email, cancelamento);
         return resultado.Erro == ErroCadastro.Nenhum
             ? Created($"/api/clientes/{resultado.Valor!.Id}", ClienteResponse.De(resultado.Valor))
             : ResponderErro(resultado);
@@ -67,7 +67,7 @@ public sealed class ClientesController : OficinaControllerBase
     [ProducesResponseType(typeof(ProblemDetails), 409)]
     public async Task<IActionResult> AtualizarClienteAsync([FromRoute] Guid id, [FromBody] ClienteRequest entrada, CancellationToken cancelamento)
     {
-        var resultado = await _cadastroService.AtualizarClienteAsync(id, entrada.Nome, entrada.Documento, cancelamento);
+        var resultado = await _cadastroService.AtualizarClienteAsync(id, entrada.Nome, entrada.Documento, entrada.Email, cancelamento);
         return resultado.Erro == ErroCadastro.Nenhum
             ? Ok(ClienteResponse.De(resultado.Valor!))
             : ResponderErro(resultado);

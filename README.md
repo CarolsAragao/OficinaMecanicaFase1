@@ -341,6 +341,12 @@ Quando o Mecânico conclui o último serviço autorizado, a OS passa a `Finaliza
 
 O cliente consulta `POST /api/cliente/ordens-servico/{numero}/andamento/consulta` com `{"documento":"529.982.247-25"}`. A rota é pública, mas só retorna dados quando número da OS e CPF/CNPJ correspondem; caso contrário, retorna `404`. A resposta contém somente `numero`, `status`, `ultimaAtualizacaoEmUtc` e `historico` (status, descrição e instante). A última atualização é o instante do registro mais recente. Documento, preços, diagnóstico e notas internas não são expostos nessa consulta, conforme D-14.
 
+### Comunicação de mudanças de status (Fase 2)
+
+A política definida para os avisos ao cliente é enviar um e-mail em cada mudança **real** do status oficial da OS: `Recebida` (abertura), `EmDiagnostico` (início do diagnóstico), `AguardandoAprovacao` (orçamento disponibilizado), `EmExecucao` (início da execução), `Finalizada` (último serviço concluído) e `Entregue` (entrega registrada). Outros marcos do histórico, como o diagnóstico registrado, a aprovação ou rejeição do orçamento e a reserva de itens, não mudam o status e não geram um novo aviso de status. A rejeição encerra a OS, mas mantém seu último status oficial `AguardandoAprovacao`; uma eventual mensagem sobre a decisão será tratada separadamente.
+
+O cadastro do cliente aceita `email` opcional em `POST /api/clientes` e `PUT /api/clientes/{id}`. O e-mail é devolvido apenas nas rotas internas de cadastro, que exigem autorização. Clientes já cadastrados permanecem com `email: null`. Em uma atualização, omitir `email` preserva o endereço existente; informar uma string vazia remove o endereço. Um endereço ausente pode ser consultado no cadastro e impedirá o futuro envio de avisos por e-mail. Esta etapa define a política e o destinatário; o envio automático será conectado aos casos de uso nas próximas etapas do item 8.
+
 ## Gestão de ordens de serviço e tempo médio
 
 O Administrador usa JWT nas consultas `GET /api/administracao/ordens-servico`,
