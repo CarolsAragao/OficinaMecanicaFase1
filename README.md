@@ -347,6 +347,10 @@ A política definida para os avisos ao cliente é enviar um e-mail em cada mudan
 
 O cadastro do cliente aceita `email` opcional em `POST /api/clientes` e `PUT /api/clientes/{id}`. O e-mail é devolvido apenas nas rotas internas de cadastro, que exigem autorização. Clientes já cadastrados permanecem com `email: null`. Em uma atualização, omitir `email` preserva o endereço existente; informar uma string vazia remove o endereço. Um endereço ausente pode ser consultado no cadastro e impedirá o futuro envio de avisos por e-mail. Esta etapa define a política e o destinatário; o envio automático será conectado aos casos de uso nas próximas etapas do item 8.
 
+Para cada status acima, `MensagemStatusOrdemServico.Criar` prepara um assunto e um corpo de e-mail em texto simples com o número da OS, o novo status em linguagem compreensível e uma explicação curta. Em `AguardandoAprovacao`, o texto informa que o orçamento está disponível e orienta o cliente a usar o formulário de decisão e o código fornecido pelo atendente. O e-mail não contém CPF/CNPJ, senha, código de acesso nem dados do orçamento; o formulário do n8n continua responsável pela aprovação ou recusa.
+
+A mensagem leva o identificador do marco do histórico, para que as próximas etapas possam reconhecer uma mesma mudança de status e evitar avisos repetidos. A interface `INotificadorStatusOrdemServico`, na **Application**, define o ponto pelo qual os casos de uso solicitarão o envio. O `Domain` não conhece e-mail, SMTP ou n8n; os controllers não compõem mensagens. Ainda não há envio automático nem implementação da interface: o adaptador externo, o registro de tentativas e a ligação às transições serão feitos nas etapas seguintes do item 8.
+
 ## Gestão de ordens de serviço e tempo médio
 
 O Administrador usa JWT nas consultas `GET /api/administracao/ordens-servico`,
