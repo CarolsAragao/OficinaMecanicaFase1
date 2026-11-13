@@ -1,0 +1,133 @@
+{
+  "name": "Decisão de orçamento do cliente",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Decisão do orçamento",
+        "formDescription": "Informe os dados recebidos da oficina para aprovar ou recusar o orçamento. Se recusar, descreva o motivo.",
+        "formFields": {
+          "values": [
+            { "fieldLabel": "Número da OS", "fieldType": "number", "requiredField": true },
+            { "fieldLabel": "CPF ou CNPJ", "fieldType": "text", "requiredField": true },
+            { "fieldLabel": "Código de acesso", "fieldType": "password", "requiredField": true },
+            {
+              "fieldLabel": "Decisão",
+              "fieldType": "dropdown",
+              "fieldOptions": { "values": [{ "option": "Aprovar" }, { "option": "Recusar" }] },
+              "requiredField": true
+            },
+            { "fieldLabel": "Motivo da recusa", "fieldType": "textarea" }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "path": "decisao-orcamento",
+          "buttonLabel": "Enviar decisão"
+        }
+      },
+      "id": "a721f29d-9e81-4a7c-9180-190a40b5f63b",
+      "name": "Formulário de decisão",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [240, 300],
+      "webhookId": "6fc05026-f0a7-496e-b895-50e07daa229d"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'http://api:8080/api/cliente/ordens-servico/' + $json['Número da OS'] + '/orcamento/decisao' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { documento: $json['CPF ou CNPJ'], codigoAcesso: $json['Código de acesso'], aprovar: $json['Decisão'] === 'Aprovar', motivo: $json['Decisão'] === 'Recusar' ? ($json['Motivo da recusa'] || null) : null } }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "3d699dcb-7a1d-4918-925d-50d754de316a",
+      "name": "Enviar decisão à API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "e05f7d10-f9de-46c6-90c5-6a58737b785f",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": { "type": "number", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d4d8934c-3ea9-4af5-ae9c-4d2c2c343804",
+      "name": "Decisão registrada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Decisão registrada",
+        "completionMessage": "Sua decisão sobre o orçamento foi registrada com sucesso.",
+        "options": {}
+      },
+      "id": "7b522d4a-7a36-4c41-a6a5-c24dc41d4581",
+      "name": "Confirmação ao cliente",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [1010, 180],
+      "webhookId": "b187bb39-8d1a-430b-8337-7168af94abf8"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Decisão não registrada",
+        "completionMessage": "={{ $json.statusCode === 404 ? 'Confira o número da OS, o CPF ou CNPJ e o código de acesso.' : $json.statusCode === 409 ? 'A decisão desse orçamento já foi registrada.' : $json.statusCode === 400 ? 'Revise os dados informados. Para recusar, informe o motivo.' : 'Não foi possível registrar a decisão agora. Tente novamente ou contate a oficina.' }}",
+        "options": {}
+      },
+      "id": "2768a611-aa4c-4dc6-8db6-bca43ab43838",
+      "name": "Orientação ao cliente",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [1010, 420],
+      "webhookId": "53314ff9-9618-4d20-a346-dcdd624b7d2c"
+    }
+  ],
+  "connections": {
+    "Formulário de decisão": {
+      "main": [[{ "node": "Enviar decisão à API", "type": "main", "index": 0 }]]
+    },
+    "Enviar decisão à API": {
+      "main": [[{ "node": "Decisão registrada?", "type": "main", "index": 0 }]]
+    },
+    "Decisão registrada?": {
+      "main": [
+        [{ "node": "Confirmação ao cliente", "type": "main", "index": 0 }],
+        [{ "node": "Orientação ao cliente", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "active": false,
+  "pinData": {}
+}

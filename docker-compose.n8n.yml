@@ -1,0 +1,17 @@
+name: oficina-mecanica-fase-1
+
+services:
+  n8n:
+    image: n8nio/n8n:2.47.5
+    environment:
+      GENERIC_TIMEZONE: America/Sao_Paulo
+      TZ: America/Sao_Paulo
+      N8N_EDITOR_BASE_URL: "http://localhost:${N8N_PORT:-5678}/"
+      N8N_WEBHOOK_URL: "http://localhost:${N8N_PORT:-5678}/"
+    ports:
+      - "127.0.0.1:${N8N_PORT:-5678}:5678"
+    volumes:
+      - dados_n8n:/home/node/.n8n
+
+volumes:
+  dados_n8n:

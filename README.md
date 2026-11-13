@@ -69,6 +69,47 @@ Invoke-RestMethod http://localhost:5080/api/saude/banco
 
 A API aguarda o SQL Server ficar saudável e aplica as migrations ao iniciar. A primeira inicialização pode levar alguns minutos. O Swagger fica em `http://localhost:5080/swagger`. Para inspecionar erros, use `docker compose logs api sqlserver`. Para parar sem apagar os dados, use `docker compose down`; o volume `dados_sqlserver` guarda os arquivos do SQL Server. `docker compose down -v` apaga esse volume e seus dados, portanto só o execute quando quiser descartá-los. As portas 5080 e 1433 ficam acessíveis apenas por `127.0.0.1` nesta configuração local. O tráfego HTTP local não usa TLS; para acesso fora da máquina, configure HTTPS e uma implantação adequada. O SQL Server Developer serve para desenvolvimento e testes, não é uma licença de produção.
 
+## Decisão do orçamento pelo n8n (Fase 2)
+
+O fluxo em [`integrations/n8n/decisao-orcamento.json`](integrations/n8n/decisao-orcamento.json) disponibiliza um formulário para o cliente informar número da OS, CPF/CNPJ, código individual e aprovação ou recusa. O n8n envia a escolha para o endpoint existente `POST /api/cliente/ordens-servico/{numero}/orcamento/decisao`; a **Application** continua validando o código e aplicando as regras do domínio. O formulário mostra confirmação somente quando a API devolve `200`; nos demais casos, orienta o cliente conforme `400`, `404` ou `409`. O fluxo não salva os dados das execuções concluídas no n8n.
+
+```mermaid
+flowchart LR
+    Cliente --> Formulario["Formulário n8n"]
+    Formulario --> API["Api: decisão do orçamento"]
+    API --> Application["Application: DecisaoOrcamentoService"]
+    Application --> Domain["Domain: Orcamento e OrdemServico"]
+```
+
+Para executar localmente junto da API, use o Compose adicional. O volume `dados_n8n` preserva a conta local e o fluxo entre reinicializações.
+
+```powershell
+docker compose -f .\docker-compose.yml -f .\docker-compose.n8n.yml up -d --build --wait
+```
+
+Se já houver outro Compose da Fase 1 usando o mesmo nome ou as portas `1433` e `5080`, isole esta execução e escolha portas livres. Neste exemplo, SQL Server usa `1434` e API usa `5081`; o n8n continua em `5678`:
+
+```powershell
+$env:SQLSERVER_PORT = '1434'
+$env:API_PORT = '5081'
+docker compose -p oficina-mecanica-fase-2-local -f .\docker-compose.yml -f .\docker-compose.n8n.yml up -d --build --wait
+```
+
+Para rodar **outro clone na mesma máquina**, escolha outro nome de projeto e outras três portas de host. Por exemplo:
+
+```powershell
+$env:SQLSERVER_PORT = '1435'
+$env:API_PORT = '5082'
+$env:N8N_PORT = '5679'
+docker compose -p oficina-mecanica-fase-2-clone -f .\docker-compose.yml -f .\docker-compose.n8n.yml up -d --build --wait
+```
+
+O nome após `-p` separa os contêineres e os volumes de cada clone. As três variáveis mudam apenas as portas acessadas pelo computador; dentro da rede de cada projeto, o n8n continua chamando a API por `api:8080`. `N8N_EDITOR_BASE_URL` e `N8N_WEBHOOK_URL` acompanham `N8N_PORT`, para que os links do formulário e da página de conclusão usem a porta certa. Confira antes se as portas escolhidas estão livres.
+
+Abra `http://localhost:5678/setup` (ou a porta definida em `N8N_PORT`) e crie o administrador local do n8n no primeiro acesso. Importe o JSON pelo menu **Import from File** do editor e publique o workflow. O formulário de produção ficará em `http://localhost:5678/form/decisao-orcamento` (troque `5678` por `N8N_PORT` se necessário). Um Atendente deve emitir e entregar o código individual ao cliente pela rota `POST /api/ordens-servico/{numero}/codigo-acesso/emissao` antes da decisão. Para recusar, o cliente precisa preencher o motivo.
+
+Para verificar a execução, consulte `http://localhost:5081/api/saude` (ou `5080`, se usou as portas padrão), preencha o formulário com uma OS que esteja aguardando aprovação e confira a decisão pela rota de consulta da proposta. O n8n resolve a API pelo nome interno `api:8080` na rede do Compose; `localhost` dentro do contêiner apontaria para o próprio n8n. O formulário está disponível apenas na máquina local nesta configuração. Para uso por clientes externos, será necessário publicar o n8n por HTTPS e revisar o acesso ao formulário e à API no ambiente de implantação.
+
 ### Windows, Linux e macOS
 
 No Windows, o script `Configurar-Acesso-Interno.ps1` preenche
