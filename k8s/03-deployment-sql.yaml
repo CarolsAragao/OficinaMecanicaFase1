@@ -1,0 +1,38 @@
+apiVersion: apps/v1 # Versão da API do Kubernetes que oferece Deployments.
+kind: Deployment # Mantém o Pod do banco em execução.
+metadata: # Identificação do Deployment.
+  name: sqlserver # Nome usado para consultar o Deployment.
+spec: # Define como o banco deve rodar.
+  replicas: 1 # Mantém um Pod do SQL Server.
+  strategy: # Define como substituir o Pod durante uma atualização.
+    type: Recreate # Encerra o Pod antigo antes de criar outro que use o mesmo disco.
+  selector: # Identifica os Pods que este Deployment gerencia.
+    matchLabels: # Rótulos que precisam coincidir com os do Pod.
+      app: sqlserver # Rótulo que identifica o banco.
+  template: # Modelo usado para criar o Pod.
+    metadata: # Identificação do Pod.
+      labels: # Rótulos aplicados ao Pod.
+        app: sqlserver # Mesmo rótulo usado no seletor.
+    spec: # Define o que roda no Pod.
+      securityContext: # Configura o acesso ao disco montado.
+        fsGroup: 10001 # Dá ao grupo do SQL Server acesso ao volume.
+      containers: # Lista de contêineres do Pod.
+        - name: sqlserver # Nome do contêiner.
+          image: mcr.microsoft.com/mssql/server:2022-latest # Mesma imagem usada no Compose.
+          env: # Configurações enviadas ao SQL Server.
+            - name: ACCEPT_EULA # Variável que aceita a licença da imagem.
+              value: "Y" # Aceita os termos de uso.
+            - name: MSSQL_PID # Seleciona a edição do SQL Server.
+              value: Developer # Usa a edição de desenvolvimento.
+            - name: MSSQL_SA_PASSWORD # Define a senha do administrador do banco.
+              valueFrom: # Busca o valor em outro recurso do cluster.
+                secretKeyRef: # Lê uma chave de um Secret.
+                  name: sqlserver-secret # Secret que você criou no passo 11.
+                  key: MSSQL_SA_PASSWORD # Chave que guarda a senha.
+          volumeMounts: # Define onde o disco entra no contêiner.
+            - name: dados # Referência ao volume abaixo.
+              mountPath: /var/opt/mssql # Pasta onde o SQL Server guarda seus arquivos.
+      volumes: # Define os discos disponíveis para o Pod.
+        - name: dados # Nome usado na montagem acima.
+          persistentVolumeClaim: # Usa o pedido de armazenamento existente.
+            claimName: sqlserver-dados # PVC que você criou no passo 12.

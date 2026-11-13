@@ -1,0 +1,23 @@
+apiVersion: batch/v1 # Versão da API do Kubernetes usada pelos Jobs.
+kind: Job # Executa a preparação do banco e termina.
+metadata: # Identifica a tarefa.
+  name: oficina-migracao # Nome usado para acompanhar o Job.
+spec: # Define como a tarefa será executada.
+  backoffLimit: 2 # Permite até duas novas tentativas em caso de falha.
+  template: # Modelo do Pod que executará a tarefa.
+    spec: # Define o que roda no Pod.
+      restartPolicy: Never # Se o contêiner falhar, o Job pode criar outro Pod.
+      containers: # Lista os contêineres do Pod.
+        - name: migracao # Nome do contêiner que prepara o banco.
+          image: oficina-api:local # Usa a imagem que você carregou no nó.
+          imagePullPolicy: Never # Usa a imagem local, sem tentar baixá-la.
+          envFrom: # Lê as configurações dos Secrets que você criou.
+            - secretRef: # Importa a string de conexão.
+                name: oficina-api-secret # Informa como chegar ao banco.
+            - secretRef: # Importa a chave JWT.
+                name: oficina-jwt-secret # Fornece a chave exigida pela aplicação.
+            - secretRef: # Importa os dados do primeiro administrador.
+                name: oficina-admin-secret # Fornece e-mail e senha.
+          env: # Configura o modo de execução.
+            - name: Banco__Inicializacao # Define como a aplicação inicia.
+              value: SomentePreparar # Prepara o banco e encerra a execução.
