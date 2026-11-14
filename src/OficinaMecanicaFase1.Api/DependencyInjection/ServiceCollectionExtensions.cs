@@ -30,9 +30,11 @@ public static class ServiceCollectionExtensions
             (documento, _, _) => EsquemaDeSegurancaOpenApi.AdicionarAsync(documento)));
 
         services.AddSqlServerPersistence(configuration);
+        services.AddSmtpNotifications(configuration);
         services.AddScoped<CadastroService>();
         services.AddScoped<CatalogoService>();
         services.AddScoped<OrdemServicoService>();
+        services.AddScoped<AvisoStatusOrdemServicoService>();
         services.AddScoped<GestaoOrdemServicoService>();
         services.AddScoped<DecisaoOrcamentoService>();
         services.AddScoped<ReservaEstoqueService>();

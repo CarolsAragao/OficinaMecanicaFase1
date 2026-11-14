@@ -4,13 +4,14 @@ using OficinaMecanicaFase1.Domain.Orcamentos;
 
 namespace OficinaMecanicaFase1.Application.OrdensServico;
 
-public sealed class ExecucaoOrdemServicoService(IExecucaoOrdemServicoRepository repositorio, TimeProvider tempo)
+public sealed class ExecucaoOrdemServicoService(
+    IExecucaoOrdemServicoRepository repositorio, TimeProvider tempo, AvisoStatusOrdemServicoService avisos)
 {
-    public Task<ResultadoOrdemServico<OrdemServico>> IniciarExecucaoAsync(
+    public async Task<ResultadoOrdemServico<OrdemServico>> IniciarExecucaoAsync(
         long numero, Guid mecanicoId, CancellationToken cancelamento)
     {
         var agora = tempo.GetUtcNow();
-        return repositorio.ExecutarAsync(numero, async (operacoes, ordem, orcamento) =>
+        var resultado = await repositorio.ExecutarAsync(numero, async (operacoes, ordem, orcamento) =>
         {
             if (orcamento?.Decisao != DecisaoOrcamento.Aprovado ||
                 !ordem.ServicosSolicitados.All(servico => orcamento.Linhas.Any(linha =>
@@ -27,6 +28,9 @@ public sealed class ExecucaoOrdemServicoService(IExecucaoOrdemServicoRepository 
             operacoes.Adicionar(ordem.IniciarExecucao(mecanicoId, agora));
             return ResultadoOrdemServico<OrdemServico>.Sucesso(ordem);
         }, cancelamento);
+        if (resultado.Erro == ErroOrdemServico.Nenhum && resultado.Valor is { } ordemSalva)
+            await avisos.AvisarAsync(ordemSalva, ordemSalva.Historico.Last());
+        return resultado;
     }
 
     public Task<ResultadoOrdemServico<OrdemServico>> IniciarServicoAsync(
@@ -50,11 +54,11 @@ public sealed class ExecucaoOrdemServicoService(IExecucaoOrdemServicoRepository 
         }, cancelamento);
     }
 
-    public Task<ResultadoOrdemServico<OrdemServico>> ConcluirServicoAsync(
+    public async Task<ResultadoOrdemServico<OrdemServico>> ConcluirServicoAsync(
         long numero, Guid servicoId, Guid mecanicoId, CancellationToken cancelamento)
     {
         var agora = tempo.GetUtcNow();
-        return repositorio.ExecutarAsync(numero, async (operacoes, ordem, orcamento) =>
+        var resultado = await repositorio.ExecutarAsync(numero, async (operacoes, ordem, orcamento) =>
         {
             var aditivos = await operacoes.ObterAditivosAsync(ordem.Id, cancelamento);
             if (orcamento?.Decisao != DecisaoOrcamento.Aprovado ||
@@ -84,6 +88,10 @@ public sealed class ExecucaoOrdemServicoService(IExecucaoOrdemServicoRepository 
             }
             return ResultadoOrdemServico<OrdemServico>.Sucesso(ordem);
         }, cancelamento);
+        if (resultado.Erro == ErroOrdemServico.Nenhum &&
+            resultado.Valor is { Status: StatusOrdemServico.Finalizada } ordemFinalizada)
+            await avisos.AvisarAsync(ordemFinalizada, ordemFinalizada.Historico.Last());
+        return resultado;
     }
 
     public Task<ResultadoOrdemServico<OrdemServico>> RegistrarConsumoAsync(

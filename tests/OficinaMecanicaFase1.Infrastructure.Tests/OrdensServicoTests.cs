@@ -1,13 +1,17 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using OficinaMecanicaFase1.Api.Contracts;
 using OficinaMecanicaFase1.Api.OrdensServico;
@@ -608,11 +612,12 @@ public sealed class OrdensServicoTests
             ["Bootstrap:AdminEmail"] = "admin@execucao.test",
             ["Bootstrap:AdminPassword"] = "AdminDeTeste123!"
         };
-        using var fabrica = new OficinaApiFactory(configuracoes);
+        var avisos = new NotificadorCaptura();
+        using var fabrica = new OficinaApiFactory(configuracoes, avisos);
         using var interno = fabrica.CreateClient();
         using var publico = fabrica.CreateClient();
         await AutenticarAsync(interno, "admin@execucao.test", "AdminDeTeste123!");
-        var pessoa = await CriarClienteAsync(interno, "Ana", "529.982.247-25");
+        var pessoa = await CriarClienteAsync(interno, "Ana", "529.982.247-25", "ana@exemplo.com");
         var veiculo = await CriarVeiculoAsync(interno, pessoa.Id, "ABC1234");
         var servicoFreio = await CriarServicoAsync(interno, "Freio", 150m);
         var servicoRevisao = await CriarServicoAsync(interno, "Revisão", 90m);
@@ -776,6 +781,19 @@ public sealed class OrdensServicoTests
         Assert.All(await db.ReservasItensOrdensServico.Where(reserva => reserva.LiberadaEmUtc != null).ToArrayAsync(),
             reserva => Assert.Equal(reserva.Quantidade, reserva.QuantidadeConsumida +
                 (reserva.ItemEstoqueId == item.Id ? 1m : 1m)));
+        var mensagens = avisos.Mensagens.ToArray();
+        Assert.Equal(new[]
+        {
+            StatusOrdemServico.Recebida, StatusOrdemServico.EmDiagnostico,
+            StatusOrdemServico.AguardandoAprovacao, StatusOrdemServico.EmExecucao,
+            StatusOrdemServico.Finalizada, StatusOrdemServico.Entregue
+        }, mensagens.Select(mensagem => mensagem.Status));
+        Assert.All(mensagens, mensagem =>
+        {
+            Assert.Equal(numero, mensagem.NumeroOrdemServico);
+            Assert.Equal("ana@exemplo.com", mensagem.EmailCliente);
+        });
+        Assert.Equal(mensagens.Length, mensagens.Select(mensagem => mensagem.MarcoHistoricoId).Distinct().Count());
 
         var agora = DateTimeOffset.UtcNow;
         OrdemServico PrepararOrdem(StatusOrdemServico status, int diasAtras)
@@ -949,9 +967,10 @@ public sealed class OrdensServicoTests
         Assert.Equal("EmExecucao", (await interno.GetFromJsonAsync<OrdemServicoResponse>(rota))!.Status);
     }
 
-    private static async Task<ClienteResponse> CriarClienteAsync(HttpClient cliente, string nome, string documento)
+    private static async Task<ClienteResponse> CriarClienteAsync(
+        HttpClient cliente, string nome, string documento, string? email = null)
     {
-        var resposta = await cliente.PostAsJsonAsync("/api/clientes", new ClienteRequest(nome, documento));
+        var resposta = await cliente.PostAsJsonAsync("/api/clientes", new ClienteRequest(nome, documento, email));
         Assert.Equal(HttpStatusCode.Created, resposta.StatusCode);
         return (await resposta.Content.ReadFromJsonAsync<ClienteResponse>())!;
     }
@@ -994,8 +1013,31 @@ public sealed class OrdensServicoTests
         cliente.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", acesso.Token);
     }
 
-    private sealed class OficinaApiFactory(IReadOnlyDictionary<string, string?> configuracoes) : WebApplicationFactory<Program>
+    private sealed class NotificadorCaptura : INotificadorStatusOrdemServico
     {
+        public ConcurrentQueue<MensagemStatusOrdemServico> Mensagens { get; } = new();
+
+        public Task EnviarAsync(MensagemStatusOrdemServico mensagem, CancellationToken cancelamento)
+        {
+            Mensagens.Enqueue(mensagem);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class OficinaApiFactory(
+        IReadOnlyDictionary<string, string?> configuracoes, INotificadorStatusOrdemServico? notificador = null)
+        : WebApplicationFactory<Program>
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            if (notificador is not null)
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<INotificadorStatusOrdemServico>();
+                    services.AddSingleton(notificador);
+                });
+        }
+
         protected override IHost CreateHost(IHostBuilder builder)
         {
             builder.ConfigureHostConfiguration(configuration => configuration.AddInMemoryCollection(configuracoes));

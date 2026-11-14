@@ -7,7 +7,7 @@ using OficinaMecanicaFase1.Domain.Estoque;
 namespace OficinaMecanicaFase1.Application.OrdensServico;
 
 public sealed class OrdemServicoService(
-    IOrdemServicoRepository repositorio, TimeProvider tempo)
+    IOrdemServicoRepository repositorio, TimeProvider tempo, AvisoStatusOrdemServicoService avisos)
 {
     public async Task<ResultadoOrdemServico<OrdemServico>> CriarAsync(
         AbrirOrdemServicoEntrada entrada, CancellationToken cancelamento)
@@ -47,7 +47,7 @@ public sealed class OrdemServicoService(
         }
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         repositorio.Adicionar(ordem);
-        return await SalvarAsync(ordem, cancelamento);
+        return await SalvarEAvisarAsync(ordem, ordem, null, cancelamento);
     }
 
     public Task<OrdemServico?> ObterAsync(long numero, CancellationToken cancelamento) =>
@@ -67,10 +67,11 @@ public sealed class OrdemServicoService(
     {
         var ordem = await repositorio.ObterAsync(numero, cancelamento);
         if (ordem is null) return NaoEncontrado<OrdemServico>();
+        var statusAnterior = ordem.Status;
         try { repositorio.Adicionar(ordem.RegistrarEntrega(atendenteId, tempo.GetUtcNow())); }
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
-        return await SalvarAsync(ordem, cancelamento);
+        return await SalvarEAvisarAsync(ordem, ordem, statusAnterior, cancelamento);
     }
 
     public async Task<ResultadoOrdemServico<OrdemServico>> AdicionarServicoAsync(
@@ -106,10 +107,11 @@ public sealed class OrdemServicoService(
     {
         var ordem = await repositorio.ObterAsync(numero, cancelamento);
         if (ordem is null) return NaoEncontrado<OrdemServico>();
+        var statusAnterior = ordem.Status;
         try { repositorio.Adicionar(ordem.IniciarDiagnostico(mecanicoId, tempo.GetUtcNow())); }
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
-        return await SalvarAsync(ordem, cancelamento);
+        return await SalvarEAvisarAsync(ordem, ordem, statusAnterior, cancelamento);
     }
 
     public async Task<ResultadoOrdemServico<OrdemServico>> RegistrarDiagnosticoAsync(
@@ -130,6 +132,7 @@ public sealed class OrdemServicoService(
         if (ordem is null) return NaoEncontrado<Orcamento>();
         if (ordem.Status != StatusOrdemServico.EmDiagnostico || ordem.DiagnosticoRegistradoEmUtc is null)
             return Invalido<Orcamento>("Registre o diagnóstico antes de gerar o orçamento.", "status");
+        var statusAnterior = ordem.Status;
         if (await repositorio.ObterOrcamentoAsync(ordem.Id, cancelamento) is not null)
             return Invalido<Orcamento>("Esta OS já possui orçamento.", "status");
 
@@ -154,7 +157,7 @@ public sealed class OrdemServicoService(
         catch (OverflowException) { return Invalido<Orcamento>("O total do orçamento excede o limite permitido.", "valor"); }
         catch (InvalidOperationException erro) { return Invalido<Orcamento>(erro.Message, "status"); }
         repositorio.Adicionar(orcamento);
-        return await SalvarAsync(orcamento, cancelamento);
+        return await SalvarEAvisarAsync(orcamento, ordem, statusAnterior, cancelamento);
     }
 
     public async Task<Orcamento?> ObterOrcamentoAsync(long numero, CancellationToken cancelamento)
@@ -185,6 +188,15 @@ public sealed class OrdemServicoService(
             return ResultadoOrdemServico<T>.Falha(ErroOrdemServico.Conflito,
                 "A ordem foi alterada ou um cadastro relacionado deixou de estar disponível. Consulte e tente novamente.");
         }
+    }
+
+    private async Task<ResultadoOrdemServico<T>> SalvarEAvisarAsync<T>(
+        T valor, OrdemServico ordem, StatusOrdemServico? statusAnterior, CancellationToken cancelamento)
+    {
+        var resultado = await SalvarAsync(valor, cancelamento);
+        if (resultado.Erro == ErroOrdemServico.Nenhum && statusAnterior != ordem.Status)
+            await avisos.AvisarAsync(ordem, ordem.Historico.Last());
+        return resultado;
     }
 
     private static ResultadoOrdemServico<T> Invalido<T>(string mensagem, string? campo = null) =>

@@ -6,12 +6,20 @@ using OficinaMecanicaFase1.Application.Catalogo;
 using OficinaMecanicaFase1.Application.OrdensServico;
 using OficinaMecanicaFase1.Application.Sistema;
 using OficinaMecanicaFase1.Infrastructure.Identity;
+using OficinaMecanicaFase1.Infrastructure.Notifications;
 using OficinaMecanicaFase1.Infrastructure.Persistence;
 
 namespace OficinaMecanicaFase1.Infrastructure.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
+    public static IServiceCollection AddSmtpNotifications(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddSingleton(SmtpConfiguracao.Ler(configuration));
+        services.AddScoped<INotificadorStatusOrdemServico, NotificadorStatusSmtp>();
+        return services;
+    }
+
     public static IServiceCollection AddSqlServerPersistence(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("Oficina");
