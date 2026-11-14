@@ -5,13 +5,13 @@ using OficinaMecanicaFase1.Domain.Orcamentos;
 namespace OficinaMecanicaFase1.Application.OrdensServico;
 
 public sealed class ExecucaoOrdemServicoService(
-    IExecucaoOrdemServicoRepository repositorio, TimeProvider tempo, AvisoStatusOrdemServicoService avisos)
+    IExecucaoOrdemServicoRepository repositorio, TimeProvider tempo)
 {
-    public async Task<ResultadoOrdemServico<OrdemServico>> IniciarExecucaoAsync(
+    public Task<ResultadoOrdemServico<OrdemServico>> IniciarExecucaoAsync(
         long numero, Guid mecanicoId, CancellationToken cancelamento)
     {
         var agora = tempo.GetUtcNow();
-        var resultado = await repositorio.ExecutarAsync(numero, async (operacoes, ordem, orcamento) =>
+        return repositorio.ExecutarAsync(numero, async (operacoes, ordem, orcamento) =>
         {
             if (orcamento?.Decisao != DecisaoOrcamento.Aprovado ||
                 !ordem.ServicosSolicitados.All(servico => orcamento.Linhas.Any(linha =>
@@ -25,12 +25,13 @@ public sealed class ExecucaoOrdemServicoService(
                     reserva.QuantidadeRestante >= necessario.Quantidade)))
                 return Invalido("A execução exige reserva integral de todos os itens autorizados.");
 
-            operacoes.Adicionar(ordem.IniciarExecucao(mecanicoId, agora));
+            var marco = ordem.IniciarExecucao(mecanicoId, agora);
+            operacoes.Adicionar(marco);
+            var email = await operacoes.ObterEmailClienteAsync(ordem.ClienteId, cancelamento);
+            if (!string.IsNullOrWhiteSpace(email))
+                operacoes.Adicionar(FabricaNotificacaoStatusOrdemServico.CriarPendente(ordem, marco, email, agora));
             return ResultadoOrdemServico<OrdemServico>.Sucesso(ordem);
         }, cancelamento);
-        if (resultado.Erro == ErroOrdemServico.Nenhum && resultado.Valor is { } ordemSalva)
-            await avisos.AvisarAsync(ordemSalva, ordemSalva.Historico.Last());
-        return resultado;
     }
 
     public Task<ResultadoOrdemServico<OrdemServico>> IniciarServicoAsync(
@@ -54,11 +55,11 @@ public sealed class ExecucaoOrdemServicoService(
         }, cancelamento);
     }
 
-    public async Task<ResultadoOrdemServico<OrdemServico>> ConcluirServicoAsync(
+    public Task<ResultadoOrdemServico<OrdemServico>> ConcluirServicoAsync(
         long numero, Guid servicoId, Guid mecanicoId, CancellationToken cancelamento)
     {
         var agora = tempo.GetUtcNow();
-        var resultado = await repositorio.ExecutarAsync(numero, async (operacoes, ordem, orcamento) =>
+        return repositorio.ExecutarAsync(numero, async (operacoes, ordem, orcamento) =>
         {
             var aditivos = await operacoes.ObterAditivosAsync(ordem.Id, cancelamento);
             if (orcamento?.Decisao != DecisaoOrcamento.Aprovado ||
@@ -84,14 +85,14 @@ public sealed class ExecucaoOrdemServicoService(
                         itens[reserva.ItemEstoqueId].LiberarReserva(reserva.QuantidadeRestante);
                     reserva.Liberar(agora);
                 }
-                operacoes.Adicionar(ordem.Historico.Last());
+                var marco = ordem.Historico.Last();
+                operacoes.Adicionar(marco);
+                var email = await operacoes.ObterEmailClienteAsync(ordem.ClienteId, cancelamento);
+                if (!string.IsNullOrWhiteSpace(email))
+                    operacoes.Adicionar(FabricaNotificacaoStatusOrdemServico.CriarPendente(ordem, marco, email, agora));
             }
             return ResultadoOrdemServico<OrdemServico>.Sucesso(ordem);
         }, cancelamento);
-        if (resultado.Erro == ErroOrdemServico.Nenhum &&
-            resultado.Valor is { Status: StatusOrdemServico.Finalizada } ordemFinalizada)
-            await avisos.AvisarAsync(ordemFinalizada, ordemFinalizada.Historico.Last());
-        return resultado;
     }
 
     public Task<ResultadoOrdemServico<OrdemServico>> RegistrarConsumoAsync(

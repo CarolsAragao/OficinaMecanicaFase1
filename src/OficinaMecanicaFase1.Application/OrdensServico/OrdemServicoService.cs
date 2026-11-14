@@ -7,7 +7,7 @@ using OficinaMecanicaFase1.Domain.Estoque;
 namespace OficinaMecanicaFase1.Application.OrdensServico;
 
 public sealed class OrdemServicoService(
-    IOrdemServicoRepository repositorio, TimeProvider tempo, AvisoStatusOrdemServicoService avisos)
+    IOrdemServicoRepository repositorio, TimeProvider tempo)
 {
     public async Task<ResultadoOrdemServico<OrdemServico>> CriarAsync(
         AbrirOrdemServicoEntrada entrada, CancellationToken cancelamento)
@@ -47,7 +47,7 @@ public sealed class OrdemServicoService(
         }
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         repositorio.Adicionar(ordem);
-        return await SalvarEAvisarAsync(ordem, ordem, null, cancelamento);
+        return await SalvarComNotificacaoAsync(ordem, ordem, null, cancelamento);
     }
 
     public Task<OrdemServico?> ObterAsync(long numero, CancellationToken cancelamento) =>
@@ -71,7 +71,7 @@ public sealed class OrdemServicoService(
         try { repositorio.Adicionar(ordem.RegistrarEntrega(atendenteId, tempo.GetUtcNow())); }
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
-        return await SalvarEAvisarAsync(ordem, ordem, statusAnterior, cancelamento);
+        return await SalvarComNotificacaoAsync(ordem, ordem, statusAnterior, cancelamento);
     }
 
     public async Task<ResultadoOrdemServico<OrdemServico>> AdicionarServicoAsync(
@@ -111,7 +111,7 @@ public sealed class OrdemServicoService(
         try { repositorio.Adicionar(ordem.IniciarDiagnostico(mecanicoId, tempo.GetUtcNow())); }
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
-        return await SalvarEAvisarAsync(ordem, ordem, statusAnterior, cancelamento);
+        return await SalvarComNotificacaoAsync(ordem, ordem, statusAnterior, cancelamento);
     }
 
     public async Task<ResultadoOrdemServico<OrdemServico>> RegistrarDiagnosticoAsync(
@@ -157,7 +157,7 @@ public sealed class OrdemServicoService(
         catch (OverflowException) { return Invalido<Orcamento>("O total do orçamento excede o limite permitido.", "valor"); }
         catch (InvalidOperationException erro) { return Invalido<Orcamento>(erro.Message, "status"); }
         repositorio.Adicionar(orcamento);
-        return await SalvarEAvisarAsync(orcamento, ordem, statusAnterior, cancelamento);
+        return await SalvarComNotificacaoAsync(orcamento, ordem, statusAnterior, cancelamento);
     }
 
     public async Task<Orcamento?> ObterOrcamentoAsync(long numero, CancellationToken cancelamento)
@@ -190,13 +190,33 @@ public sealed class OrdemServicoService(
         }
     }
 
-    private async Task<ResultadoOrdemServico<T>> SalvarEAvisarAsync<T>(
+    private async Task<ResultadoOrdemServico<T>> SalvarComNotificacaoAsync<T>(
         T valor, OrdemServico ordem, StatusOrdemServico? statusAnterior, CancellationToken cancelamento)
     {
-        var resultado = await SalvarAsync(valor, cancelamento);
-        if (resultado.Erro == ErroOrdemServico.Nenhum && statusAnterior != ordem.Status)
-            await avisos.AvisarAsync(ordem, ordem.Historico.Last());
-        return resultado;
+        try
+        {
+            if (statusAnterior == ordem.Status)
+            {
+                await repositorio.SalvarAsync(cancelamento);
+            }
+            else
+            {
+                var email = await repositorio.ObterEmailClienteAsync(ordem.ClienteId, cancelamento);
+                if (string.IsNullOrWhiteSpace(email))
+                    await repositorio.SalvarAsync(cancelamento);
+                else
+                    await repositorio.SalvarComNotificacaoAsync(
+                        () => repositorio.Adicionar(FabricaNotificacaoStatusOrdemServico.CriarPendente(
+                            ordem, ordem.Historico.Last(), email, tempo.GetUtcNow())), cancelamento);
+            }
+
+            return ResultadoOrdemServico<T>.Sucesso(valor);
+        }
+        catch (ConflitoPersistenciaException)
+        {
+            return ResultadoOrdemServico<T>.Falha(ErroOrdemServico.Conflito,
+                "A ordem foi alterada ou um cadastro relacionado deixou de estar disponível. Consulte e tente novamente.");
+        }
     }
 
     private static ResultadoOrdemServico<T> Invalido<T>(string mensagem, string? campo = null) =>

@@ -586,6 +586,73 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.NotificacaoStatusOrdemServico", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Assunto")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("Corpo")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTimeOffset>("CriadaEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Destinatario")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<DateTimeOffset?>("EnviadaEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("MarcoHistoricoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("NumeroOrdemServico")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("OrdemServicoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ProcessandoAteUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ProximaTentativaEmUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Situacao")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UltimoErro")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MarcoHistoricoId")
+                        .IsUnique();
+
+                    b.HasIndex("OrdemServicoId");
+
+                    b.HasIndex("Situacao", "ProximaTentativaEmUtc");
+
+                    b.ToTable("NotificacoesStatusOrdensServico", (string)null);
+                });
+
             modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", b =>
                 {
                     b.Property<Guid>("Id")
@@ -893,6 +960,21 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                         .WithMany("ItensNecessarios")
                         .HasForeignKey("OrdemServicoId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OficinaMecanicaFase1.Domain.OrdensServico.NotificacaoStatusOrdemServico", b =>
+                {
+                    b.HasOne("OficinaMecanicaFase1.Domain.OrdensServico.RegistroHistoricoOrdemServico", null)
+                        .WithMany()
+                        .HasForeignKey("MarcoHistoricoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("OficinaMecanicaFase1.Domain.OrdensServico.OrdemServico", null)
+                        .WithMany()
+                        .HasForeignKey("OrdemServicoId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

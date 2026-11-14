@@ -66,16 +66,43 @@ public sealed class OrdemServicoRepository(OficinaDbContext db) : IOrdemServicoR
         await db.ItensEstoque.Where(item => ids.Contains(item.Id))
             .ToDictionaryAsync(item => item.Id, cancelamento);
 
+    public Task<string?> ObterEmailClienteAsync(Guid clienteId, CancellationToken cancelamento) =>
+        db.Clientes.AsNoTracking().Where(cliente => cliente.Id == clienteId)
+            .Select(cliente => cliente.Email).SingleOrDefaultAsync(cancelamento);
+
     public void Adicionar(OrdemServico ordem) => db.OrdensServico.Add(ordem);
     public void Adicionar(ServicoSolicitado servico) => db.Set<ServicoSolicitado>().Add(servico);
     public void Adicionar(ItemNecessario item) => db.Set<ItemNecessario>().Add(item);
     public void Adicionar(RegistroHistoricoOrdemServico marco) => db.Set<RegistroHistoricoOrdemServico>().Add(marco);
     public void Adicionar(Orcamento orcamento) => db.Orcamentos.Add(orcamento);
     public void Adicionar(EmissaoCodigoAcesso emissao) => db.Set<EmissaoCodigoAcesso>().Add(emissao);
+    public void Adicionar(NotificacaoStatusOrdemServico notificacao) => db.Set<NotificacaoStatusOrdemServico>().Add(notificacao);
 
     public async Task SalvarAsync(CancellationToken cancelamento)
     {
         try { await db.SaveChangesAsync(cancelamento); }
+        catch (DbUpdateConcurrencyException erro) { throw new ConflitoPersistenciaException(erro); }
+        catch (DbUpdateException erro) when (erro.InnerException is SqlException sql &&
+            sql.Number is 2601 or 2627 or 547)
+        {
+            throw new ConflitoPersistenciaException(erro);
+        }
+    }
+
+    public async Task SalvarComNotificacaoAsync(Action registrarNotificacao, CancellationToken cancelamento)
+    {
+        try
+        {
+            var estrategia = db.Database.CreateExecutionStrategy();
+            await estrategia.ExecuteAsync(async () =>
+            {
+                await using var transacao = await db.Database.BeginTransactionAsync(cancelamento);
+                await db.SaveChangesAsync(cancelamento);
+                registrarNotificacao();
+                await db.SaveChangesAsync(cancelamento);
+                await transacao.CommitAsync(cancelamento);
+            });
+        }
         catch (DbUpdateConcurrencyException erro) { throw new ConflitoPersistenciaException(erro); }
         catch (DbUpdateException erro) when (erro.InnerException is SqlException sql &&
             sql.Number is 2601 or 2627 or 547)

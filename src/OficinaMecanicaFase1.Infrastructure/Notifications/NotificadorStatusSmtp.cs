@@ -12,11 +12,7 @@ internal sealed class NotificadorStatusSmtp(
     public async Task EnviarAsync(MensagemStatusOrdemServico mensagem, CancellationToken cancelamento)
     {
         if (!configuracao.Enabled)
-        {
-            logger.LogDebug("SMTP desabilitado; aviso da OS {Numero} não enviado. Marco {MarcoId}.",
-                mensagem.NumeroOrdemServico, mensagem.MarcoHistoricoId);
-            return;
-        }
+            throw new InvalidOperationException("SMTP está desabilitado.");
 
         var email = new MimeMessage();
         email.From.Add(new MailboxAddress(configuracao.FromName, configuracao.FromEmail!));

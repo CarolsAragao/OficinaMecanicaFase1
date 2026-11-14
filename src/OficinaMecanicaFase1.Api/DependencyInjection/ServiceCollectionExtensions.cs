@@ -34,7 +34,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<CadastroService>();
         services.AddScoped<CatalogoService>();
         services.AddScoped<OrdemServicoService>();
-        services.AddScoped<AvisoStatusOrdemServicoService>();
         services.AddScoped<GestaoOrdemServicoService>();
         services.AddScoped<DecisaoOrcamentoService>();
         services.AddScoped<ReservaEstoqueService>();

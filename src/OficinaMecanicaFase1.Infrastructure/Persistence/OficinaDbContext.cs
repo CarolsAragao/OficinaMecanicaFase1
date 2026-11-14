@@ -21,6 +21,7 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
     public DbSet<ReservaItemOrdemServico> ReservasItensOrdensServico => Set<ReservaItemOrdemServico>();
     public DbSet<AvisoReservaRecusada> AvisosReservaRecusada => Set<AvisoReservaRecusada>();
     public DbSet<ConsumoItemOrdemServico> ConsumosItensOrdensServico => Set<ConsumoItemOrdemServico>();
+    public DbSet<NotificacaoStatusOrdemServico> NotificacoesStatusOrdensServico => Set<NotificacaoStatusOrdemServico>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -175,6 +176,26 @@ public sealed class OficinaDbContext(DbContextOptions<OficinaDbContext> options)
             entity.Property(marco => marco.Descricao).HasMaxLength(200).IsRequired();
             entity.Property(marco => marco.RegistradoEmUtc).IsRequired();
             entity.HasIndex(marco => new { marco.OrdemServicoId, marco.RegistradoEmUtc });
+        });
+
+        modelBuilder.Entity<NotificacaoStatusOrdemServico>(entity =>
+        {
+            entity.ToTable("NotificacoesStatusOrdensServico");
+            entity.HasKey(notificacao => notificacao.Id);
+            entity.Property(notificacao => notificacao.Status).HasConversion<int>().IsRequired();
+            entity.Property(notificacao => notificacao.Situacao).HasConversion<int>().IsRequired();
+            entity.Property(notificacao => notificacao.Destinatario).HasMaxLength(254).IsRequired();
+            entity.Property(notificacao => notificacao.Assunto).HasMaxLength(250).IsRequired();
+            entity.Property(notificacao => notificacao.Corpo).HasMaxLength(4000).IsRequired();
+            entity.Property(notificacao => notificacao.UltimoErro).HasMaxLength(1000);
+            entity.Property(notificacao => notificacao.CriadaEmUtc).IsRequired();
+            entity.Property(notificacao => notificacao.ProximaTentativaEmUtc).IsRequired();
+            entity.HasIndex(notificacao => notificacao.MarcoHistoricoId).IsUnique();
+            entity.HasIndex(notificacao => new { notificacao.Situacao, notificacao.ProximaTentativaEmUtc });
+            entity.HasOne<OrdemServico>().WithMany().HasForeignKey(notificacao => notificacao.OrdemServicoId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<RegistroHistoricoOrdemServico>().WithMany().HasForeignKey(notificacao => notificacao.MarcoHistoricoId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<EmissaoCodigoAcesso>(entity =>
