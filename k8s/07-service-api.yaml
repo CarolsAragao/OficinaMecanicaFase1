@@ -1,0 +1,10 @@
+apiVersion: v1 # Versão da API do Kubernetes usada pelo Service.
+kind: Service # Dá um endereço fixo à API dentro do cluster.
+metadata: # Identifica o Service.
+  name: oficina-api # Nome usado para acessar a API no cluster.
+spec: # Define para onde o tráfego vai.
+  selector: # Encontra os Pods pelo rótulo.
+    app: oficina-api # Mesmo rótulo do Pod no Deployment da API.
+  ports: # Define as portas usadas na conexão.
+    - port: 80 # Porta de entrada do Service.
+      targetPort: 8080 # Porta em que a API escuta no Pod.

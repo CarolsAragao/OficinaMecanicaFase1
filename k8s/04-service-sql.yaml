@@ -1,0 +1,10 @@
+apiVersion: v1 # Versão da API do Kubernetes usada pelo Service.
+kind: Service # Dá ao banco um endereço fixo dentro do cluster.
+metadata: # Identifica o Service.
+  name: sqlserver # Nome que a API vai usar para encontrar o banco.
+spec: # Define para onde as conexões serão encaminhadas.
+  selector: # Encontra os Pods pelo rótulo.
+    app: sqlserver # Mesmo rótulo do Pod no Deployment do SQL Server.
+  ports: # Define a porta do Service e a porta de destino.
+    - port: 1433 # Porta que a API vai usar.
+      targetPort: 1433 # Porta em que o SQL Server escuta no Pod.

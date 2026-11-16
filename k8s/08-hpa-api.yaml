@@ -1,0 +1,24 @@
+apiVersion: autoscaling/v2 # Versão da API que permite usar CPU e memória juntas.
+kind: HorizontalPodAutoscaler # Ajusta a quantidade de Pods.
+metadata: # Identifica o HPA.
+  name: oficina-api # Nome usado para consultar o HPA.
+spec: # Define o que escalar e quais métricas usar.
+  scaleTargetRef: # Identifica o recurso que terá suas réplicas ajustadas.
+    apiVersion: apps/v1 # Versão da API do Deployment.
+    kind: Deployment # Tipo de recurso que será escalado.
+    name: oficina-api # Deployment da sua API.
+  minReplicas: 1 # Mantém pelo menos um Pod.
+  maxReplicas: 3 # Permite até três Pods.
+  metrics: # Lista as métricas que o HPA acompanha.
+    - type: Resource # Mede o consumo de um recurso dos Pods.
+      resource: # Configura a métrica de CPU.
+        name: cpu # Usa o consumo de CPU.
+        target: # Define o alvo para essa métrica.
+          type: Utilization # Calcula a porcentagem sobre os 100m solicitados.
+          averageUtilization: 60 # Alvo médio de 60% por Pod.
+    - type: Resource # Mede o consumo de outro recurso dos Pods.
+      resource: # Configura a métrica de memória.
+        name: memory # Usa o consumo de memória.
+        target: # Define o alvo para essa métrica.
+          type: Utilization # Calcula a porcentagem sobre os 256Mi solicitados.
+          averageUtilization: 80 # Alvo médio de 80% por Pod.

@@ -1,0 +1,41 @@
+apiVersion: apps/v1 # Versão da API do Kubernetes usada por Deployments.
+kind: Deployment # Mantém os Pods da API em execução.
+metadata: # Identifica o Deployment.
+  name: oficina-api # Nome usado para acompanhar a API.
+spec: # Define como a API vai rodar.
+  replicas: 1 # Começa com um Pod.
+  selector: # Identifica os Pods gerenciados pelo Deployment.
+    matchLabels: # Rótulos que precisam coincidir com os do Pod.
+      app: oficina-api # Rótulo da API.
+  template: # Modelo usado para criar cada Pod.
+    metadata: # Identifica o Pod.
+      labels: # Rótulos aplicados ao Pod.
+        app: oficina-api # Mesmo rótulo usado no seletor.
+    spec: # Define o que roda dentro do Pod.
+      containers: # Lista os contêineres do Pod.
+        - name: api # Nome do contêiner da API.
+          image: oficina-api:local # Imagem que você carregou no nó.
+          imagePullPolicy: Never # Usa a imagem que já está no nó.
+          envFrom: # Carrega configurações como variáveis de ambiente.
+            - configMapRef: # Lê o ConfigMap da API.
+                name: oficina-config # Configura a porta 8080.
+            - secretRef: # Lê a configuração de conexão.
+                name: oficina-api-secret # Contém o endereço e a senha do banco.
+            - secretRef: # Lê a chave de autenticação.
+                name: oficina-jwt-secret # Contém a chave JWT.
+          env: # Define opções de inicialização da API.
+            - name: Banco__Inicializacao # Configura quem prepara o banco.
+              value: Externa # Usa o banco que o Job já preparou.
+            - name: ASPNETCORE_ENVIRONMENT # Define o ambiente da aplicação.
+              value: Development # Habilita o Swagger neste laboratório.
+          ports: # Declara a porta da API.
+            - containerPort: 8080 # Porta em que o contêiner recebe requisições.
+          resources: # Define os recursos solicitados pelo contêiner.
+            requests: # Valores de referência usados pelo HPA.
+              cpu: 100m # Solicita um décimo de um núcleo de CPU.
+              memory: 256Mi # Solicita 256 MiB de memória.
+          readinessProbe: # Verifica se a API está pronta para receber tráfego.
+            httpGet: # Faz uma requisição HTTP de teste.
+              path: /api/saude/banco # Verifica se a API consegue acessar o banco.
+              port: 8080 # Porta usada pela verificação.
+            timeoutSeconds: 5 # Tempo máximo para cada verificação.
