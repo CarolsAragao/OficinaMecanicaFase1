@@ -24,6 +24,7 @@ public sealed class NotificacaoStatusOrdemServico
     public DateTimeOffset CriadaEmUtc { get; private set; }
     public DateTimeOffset ProximaTentativaEmUtc { get; private set; }
     public DateTimeOffset? ProcessandoAteUtc { get; private set; }
+    public Guid? ProcessamentoId { get; private set; }
     public DateTimeOffset? EnviadaEmUtc { get; private set; }
     public string? UltimoErro { get; private set; }
 

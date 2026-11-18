@@ -18,8 +18,11 @@ public sealed class ProcessadorNotificacoesStatus(
 
         foreach (var notificacao in notificacoes)
         {
-            var assumida = await repositorio.TentarAssumirAsync(notificacao.Id, agora,
-                agora.AddSeconds(configuracao.ProcessamentoExpiraEmSegundos), cancelamento);
+            agora = tempo.GetUtcNow();
+            var processamentoId = Guid.NewGuid();
+            var processandoAte = agora.AddSeconds(configuracao.ProcessamentoExpiraEmSegundos);
+            var assumida = await repositorio.TentarAssumirAsync(notificacao.Id, processamentoId, agora,
+                processandoAte, cancelamento);
             if (!assumida) continue;
 
             var mensagem = new MensagemStatusOrdemServico(
@@ -27,8 +30,17 @@ public sealed class ProcessadorNotificacoesStatus(
                 notificacao.Status, notificacao.Assunto, notificacao.Corpo);
             try
             {
-                await notificador.EnviarAsync(mensagem, cancelamento);
-                await repositorio.MarcarEnviadaAsync(notificacao.Id, tempo.GetUtcNow(), cancelamento);
+                var restante = processandoAte - tempo.GetUtcNow();
+                if (restante <= TimeSpan.Zero)
+                    throw new TimeoutException("A reserva do aviso expirou antes do envio.");
+                using var prazoEnvio = CancellationTokenSource.CreateLinkedTokenSource(cancelamento);
+                prazoEnvio.CancelAfter(restante);
+                await notificador.EnviarAsync(mensagem, prazoEnvio.Token);
+                var enviada = await repositorio.MarcarEnviadaAsync(
+                    notificacao.Id, processamentoId, tempo.GetUtcNow(), cancelamento);
+                if (!enviada)
+                    logger.LogWarning("A tentativa perdeu a reserva do aviso {NotificacaoId}; não alterou o registro.",
+                        notificacao.Id);
             }
             catch (OperationCanceledException) when (cancelamento.IsCancellationRequested)
             {
@@ -36,7 +48,7 @@ public sealed class ProcessadorNotificacoesStatus(
             }
             catch (Exception erro)
             {
-                await repositorio.ReagendarAsync(notificacao.Id,
+                await repositorio.ReagendarAsync(notificacao.Id, processamentoId,
                     tempo.GetUtcNow().AddSeconds(configuracao.AtrasoTentativaSegundos), erro.Message, cancelamento);
                 logger.LogWarning(erro,
                     "Falha ao enviar aviso de status da OS {Numero}. Marco {MarcoId}; nova tentativa será agendada.",

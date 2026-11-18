@@ -201,17 +201,17 @@ public sealed class NotificadorStatusSmtpTests
             DateTimeOffset agora, int quantidadeMaxima, CancellationToken cancelamento) =>
             Task.FromResult<IReadOnlyCollection<NotificacaoStatusOrdemServico>>([aviso]);
 
-        public Task<bool> TentarAssumirAsync(Guid notificacaoId, DateTimeOffset agora,
+        public Task<bool> TentarAssumirAsync(Guid notificacaoId, Guid processamentoId, DateTimeOffset agora,
             DateTimeOffset processandoAteUtc, CancellationToken cancelamento) => Task.FromResult(true);
 
-        public Task MarcarEnviadaAsync(Guid notificacaoId, DateTimeOffset enviadaEmUtc,
-            CancellationToken cancelamento) => Task.CompletedTask;
+        public Task<bool> MarcarEnviadaAsync(Guid notificacaoId, Guid processamentoId, DateTimeOffset enviadaEmUtc,
+            CancellationToken cancelamento) => Task.FromResult(true);
 
-        public Task ReagendarAsync(Guid notificacaoId, DateTimeOffset proximaTentativaEmUtc,
+        public Task<bool> ReagendarAsync(Guid notificacaoId, Guid processamentoId, DateTimeOffset proximaTentativaEmUtc,
             string erro, CancellationToken cancelamento)
         {
             Reagendamento = (notificacaoId, proximaTentativaEmUtc, erro);
-            return Task.CompletedTask;
+            return Task.FromResult(true);
         }
     }
 }

@@ -18,7 +18,7 @@ public sealed class NotificacaoStatusRepository(OficinaDbContext db) : INotifica
             .Take(quantidadeMaxima)
             .ToArrayAsync(cancelamento);
 
-    public async Task<bool> TentarAssumirAsync(Guid notificacaoId, DateTimeOffset agora,
+    public async Task<bool> TentarAssumirAsync(Guid notificacaoId, Guid processamentoId, DateTimeOffset agora,
         DateTimeOffset processandoAteUtc, CancellationToken cancelamento)
     {
         var atualizadas = await db.NotificacoesStatusOrdensServico
@@ -29,30 +29,36 @@ public sealed class NotificacaoStatusRepository(OficinaDbContext db) : INotifica
                   notificacao.ProcessandoAteUtc <= agora)))
             .ExecuteUpdateAsync(atualiza => atualiza
                 .SetProperty(notificacao => notificacao.Situacao, SituacaoNotificacaoStatusOrdemServico.EmProcessamento)
+                .SetProperty(notificacao => notificacao.ProcessamentoId, processamentoId)
                 .SetProperty(notificacao => notificacao.ProcessandoAteUtc, processandoAteUtc), cancelamento);
         return atualizadas == 1;
     }
 
-    public Task MarcarEnviadaAsync(Guid notificacaoId, DateTimeOffset enviadaEmUtc, CancellationToken cancelamento) =>
-        db.NotificacoesStatusOrdensServico
+    public async Task<bool> MarcarEnviadaAsync(Guid notificacaoId, Guid processamentoId,
+        DateTimeOffset enviadaEmUtc, CancellationToken cancelamento) =>
+        await db.NotificacoesStatusOrdensServico
             .Where(notificacao => notificacao.Id == notificacaoId &&
+                notificacao.ProcessamentoId == processamentoId &&
                 notificacao.Situacao == SituacaoNotificacaoStatusOrdemServico.EmProcessamento)
             .ExecuteUpdateAsync(atualiza => atualiza
                 .SetProperty(notificacao => notificacao.Situacao, SituacaoNotificacaoStatusOrdemServico.Enviada)
                 .SetProperty(notificacao => notificacao.EnviadaEmUtc, enviadaEmUtc)
                 .SetProperty(notificacao => notificacao.ProcessandoAteUtc, (DateTimeOffset?)null)
-                .SetProperty(notificacao => notificacao.UltimoErro, (string?)null), cancelamento);
+                .SetProperty(notificacao => notificacao.ProcessamentoId, (Guid?)null)
+                .SetProperty(notificacao => notificacao.UltimoErro, (string?)null), cancelamento) == 1;
 
-    public Task ReagendarAsync(Guid notificacaoId, DateTimeOffset proximaTentativaEmUtc,
+    public async Task<bool> ReagendarAsync(Guid notificacaoId, Guid processamentoId, DateTimeOffset proximaTentativaEmUtc,
         string erro, CancellationToken cancelamento) =>
-        db.NotificacoesStatusOrdensServico
+        await db.NotificacoesStatusOrdensServico
             .Where(notificacao => notificacao.Id == notificacaoId &&
+                notificacao.ProcessamentoId == processamentoId &&
                 notificacao.Situacao == SituacaoNotificacaoStatusOrdemServico.EmProcessamento)
             .ExecuteUpdateAsync(atualiza => atualiza
                 .SetProperty(notificacao => notificacao.Situacao, SituacaoNotificacaoStatusOrdemServico.Pendente)
                 .SetProperty(notificacao => notificacao.Tentativas, notificacao => notificacao.Tentativas + 1)
                 .SetProperty(notificacao => notificacao.ProximaTentativaEmUtc, proximaTentativaEmUtc)
                 .SetProperty(notificacao => notificacao.ProcessandoAteUtc, (DateTimeOffset?)null)
+                .SetProperty(notificacao => notificacao.ProcessamentoId, (Guid?)null)
                 .SetProperty(notificacao => notificacao.UltimoErro,
-                    erro.Length <= 1000 ? erro : erro[..1000]), cancelamento);
+                    erro.Length <= 1000 ? erro : erro[..1000]), cancelamento) == 1;
 }

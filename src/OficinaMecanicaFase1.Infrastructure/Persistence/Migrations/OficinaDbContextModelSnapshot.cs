@@ -622,6 +622,9 @@ namespace OficinaMecanicaFase1.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OrdemServicoId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("ProcessamentoId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset?>("ProcessandoAteUtc")
                         .HasColumnType("datetimeoffset");
 
