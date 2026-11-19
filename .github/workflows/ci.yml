@@ -1,0 +1,47 @@
+# Nome que aparecerá na página de Actions do GitHub.
+name: CI
+
+# Executa em push para a main e em pull requests com destino à main.
+on:
+  push:
+    # Só inicia em alterações enviadas para a branch main.
+    branches:
+      - main
+  pull_request:
+    # Só inicia em pull requests cujo destino é a branch main.
+    branches:
+      - main
+
+# Dá ao workflow apenas permissão de leitura do código.
+permissions:
+  contents: read
+
+# Lista os trabalhos que o GitHub executará.
+jobs:
+  compilar-e-testar:
+    # Usa uma máquina Linux temporária do GitHub.
+    runs-on: ubuntu-latest
+
+    # Etapas executadas em sequência.
+    steps:
+      # Baixa o conteúdo do repositório para a máquina temporária.
+      - name: Baixar o código
+        uses: actions/checkout@v7
+
+      # Instala o SDK necessário para compilar o projeto.
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # Baixa os pacotes NuGet usados pela solução.
+      - name: Restaurar dependências
+        run: dotnet restore OficinaMecanicaFase1.slnx
+
+      # Compila a solução em modo Release.
+      - name: Compilar
+        run: dotnet build OficinaMecanicaFase1.slnx --configuration Release --no-restore
+
+      # Executa os testes da solução.
+      - name: Rodar testes
+        run: dotnet test OficinaMecanicaFase1.slnx --configuration Release --no-build
