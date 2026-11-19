@@ -16,5 +16,11 @@ coverage/
 *.key
 secrets/
 
+# Estado, cache e planos locais do Terraform.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+
 *.log
 *.tmp

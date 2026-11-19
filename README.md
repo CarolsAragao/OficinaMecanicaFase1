@@ -44,7 +44,30 @@ flowchart LR
 
 Por exemplo, ao abrir uma OS, `OrdensServicoController` recebe os dados HTTP e chama `OrdemServicoService`. O serviço aplica o caso de uso com as regras de `OrdemServico` e acessa dados pela interface `IOrdemServicoRepository`; `OrdemServicoRepository` implementa essa interface usando o banco. O fluxo da requisição atravessa essas peças, enquanto as dependências de código continuam apontando para as camadas internas.
 
-Este desenho representa a **arquitetura da aplicação já implementada**. O diagrama de infraestrutura da Fase 2 será completado com os recursos efetivamente escolhidos e provisionados em Kubernetes e Terraform e com o fluxo de deploy da pipeline.
+Este desenho representa a **arquitetura da aplicação**. A infraestrutura de laboratório da Fase 2 usa Kubernetes para executar a API e o SQL Server, e Terraform para criar um cluster local com kind e aplicar os manifestos.
+
+## Kubernetes, Terraform e CI (Fase 2)
+
+Os manifestos em [`k8s`](k8s) descrevem os recursos Kubernetes da aplicação:
+
+| Arquivo | Recurso | Função |
+| --- | --- | --- |
+| `01-configuracao.yaml` | ConfigMap | Configura a URL em que a API escuta. |
+| `02-volume-sql.yaml` | PersistentVolumeClaim | Solicita armazenamento persistente para o SQL Server. |
+| `03-deployment-sql.yaml` | Deployment | Mantém o Pod do SQL Server em execução. |
+| `04-service-sql.yaml` | Service | Dá ao SQL Server um endereço estável dentro do cluster. |
+| `05-job-migracao.yaml` | Job | Prepara o banco usando a imagem da API e termina. |
+| `06-deployment-api.yaml` | Deployment | Mantém os Pods da API em execução. |
+| `07-service-api.yaml` | Service | Dá à API um endereço estável dentro do cluster. |
+| `08-hpa-api.yaml` | HorizontalPodAutoscaler | Ajusta a quantidade de Pods da API conforme o uso de recursos. |
+
+O arquivo [`infra/main.tf`](infra/main.tf) usa Terraform e comandos locais para criar o cluster kind `oficina-tf` e aplicar os manifestos com o contexto `kind-oficina-tf`. Esse laboratório exige Docker, kind, kubectl, Terraform, a imagem local `oficina-api:local` carregada no nó e os Secrets necessários criados no cluster. Os Secrets são preparados fora do Terraform e não devem conter valores reais no Git.
+
+O cluster `docker-desktop` é separado do cluster `oficina-tf`. A implantação no Kubernetes do Docker Desktop foi feita diretamente com `kubectl`; o Terraform atual não cria nem administra esse cluster.
+
+O workflow [`ci.yml`](.github/workflows/ci.yml) executa em pushes para `main` e em pull requests com destino à `main`. Ele instala o .NET 10, restaura dependências, compila a solução e executa os testes. O CI não publica uma imagem Docker nem implanta a aplicação. O CD ainda não está configurado.
+
+Os arquivos de estado do Terraform (`*.tfstate`) e planos (`*.tfplan`) são locais e ignorados pelo Git. Os comandos `git rm --cached` removem arquivos do rastreamento do Git sem apagar as cópias locais.
 
 O teste `ArquiteturaTests` confere as dependências compiladas de `Domain` e `Application`: essas camadas não devem referenciar `Api`, `Infrastructure`, ASP.NET Core ou EF Core. Ele roda com os demais testes sem precisar de Docker.
 
