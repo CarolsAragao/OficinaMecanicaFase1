@@ -82,12 +82,17 @@ public sealed class CadastrosTests
         }
         var invalido = await cliente.PostAsJsonAsync("/api/clientes", new ClienteRequest("Ana", "111.111.111-11"));
         Assert.Equal(HttpStatusCode.BadRequest, invalido.StatusCode);
+        var emailInvalido = await cliente.PostAsJsonAsync("/api/clientes",
+            new ClienteRequest("Ana", "529.982.247-25", "email-invalido"));
+        Assert.Equal(HttpStatusCode.BadRequest, emailInvalido.StatusCode);
 
-        var criacao = await cliente.PostAsJsonAsync("/api/clientes", new ClienteRequest("Ana", "529.982.247-25"));
+        var criacao = await cliente.PostAsJsonAsync("/api/clientes",
+            new ClienteRequest("Ana", "529.982.247-25", " ana@exemplo.com "));
         Assert.Equal(HttpStatusCode.Created, criacao.StatusCode);
         var ana = await criacao.Content.ReadFromJsonAsync<ClienteResponse>();
         Assert.NotNull(ana);
         Assert.Equal("52998224725", ana.Documento);
+        Assert.Equal("ana@exemplo.com", ana.Email);
 
         var consulta = await cliente.GetFromJsonAsync<ClienteResponse[]>("/api/clientes?documento=529.982.247-25");
         Assert.Single(consulta!);
@@ -102,6 +107,7 @@ public sealed class CadastrosTests
         Assert.Equal(HttpStatusCode.Created, segundoCliente.StatusCode);
         var oficina = await segundoCliente.Content.ReadFromJsonAsync<ClienteResponse>();
         Assert.NotNull(oficina);
+        Assert.Null(oficina.Email);
 
         var semProprietario = await cliente.PostAsJsonAsync("/api/veiculos", new CriarVeiculoRequest(
             Guid.NewGuid(), "ABC1234", "Fiat", "Uno", 2020));
@@ -137,7 +143,14 @@ public sealed class CadastrosTests
         var atualizarCliente = await cliente.PutAsJsonAsync($"/api/clientes/{ana.Id}",
             new ClienteRequest("Ana Maria", "529.982.247-25"));
         Assert.Equal(HttpStatusCode.OK, atualizarCliente.StatusCode);
-        Assert.Equal("Ana Maria", (await atualizarCliente.Content.ReadFromJsonAsync<ClienteResponse>())!.Nome);
+        var anaAtualizada = (await atualizarCliente.Content.ReadFromJsonAsync<ClienteResponse>())!;
+        Assert.Equal("Ana Maria", anaAtualizada.Nome);
+        Assert.Equal("ana@exemplo.com", anaAtualizada.Email);
+        var limparEmail = await cliente.PutAsJsonAsync($"/api/clientes/{ana.Id}",
+            new ClienteRequest("Ana Maria", "529.982.247-25", " "));
+        Assert.Equal(HttpStatusCode.OK, limparEmail.StatusCode);
+        Assert.Null((await limparEmail.Content.ReadFromJsonAsync<ClienteResponse>())!.Email);
+        Assert.Null((await cliente.GetFromJsonAsync<ClienteResponse>($"/api/clientes/{ana.Id}"))!.Email);
 
         var novoAtendente = await cliente.PostAsJsonAsync("/api/interno/usuarios", new
         {

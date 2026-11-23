@@ -1,17 +1,32 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using OficinaMecanicaFase1.Application.Cadastros;
 using OficinaMecanicaFase1.Application.Catalogo;
 using OficinaMecanicaFase1.Application.OrdensServico;
 using OficinaMecanicaFase1.Application.Sistema;
 using OficinaMecanicaFase1.Infrastructure.Identity;
+using OficinaMecanicaFase1.Infrastructure.Notifications;
 using OficinaMecanicaFase1.Infrastructure.Persistence;
 
 namespace OficinaMecanicaFase1.Infrastructure.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
+    public static IServiceCollection AddSmtpNotifications(this IServiceCollection services, IConfiguration configuration)
+    {
+        var smtp = SmtpConfiguracao.Ler(configuration);
+        var notificacoes = NotificacoesStatusConfiguracao.Ler(configuration);
+        services.AddSingleton(smtp);
+        services.AddSingleton(notificacoes);
+        services.AddScoped<INotificadorStatusOrdemServico, NotificadorStatusSmtp>();
+        services.AddScoped<ProcessadorNotificacoesStatus>();
+        if (smtp.Enabled && notificacoes.ProcessadorAtivo)
+            services.AddHostedService<ServicoHospedadoNotificacoesStatus>();
+        return services;
+    }
+
     public static IServiceCollection AddSqlServerPersistence(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("Oficina");
@@ -26,6 +41,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICadastroRepository, CadastroRepository>();
         services.AddScoped<ICatalogoRepository, CatalogoRepository>();
         services.AddScoped<IOrdemServicoRepository, OrdemServicoRepository>();
+        services.AddScoped<INotificacaoStatusRepository, NotificacaoStatusRepository>();
         services.AddScoped<IConsultaGestaoOrdemServicoRepository, ConsultaGestaoOrdemServicoRepository>();
         services.AddScoped<IReservaEstoqueRepository, ReservaEstoqueRepository>();
         services.AddScoped<IExecucaoOrdemServicoRepository, ExecucaoOrdemServicoRepository>();

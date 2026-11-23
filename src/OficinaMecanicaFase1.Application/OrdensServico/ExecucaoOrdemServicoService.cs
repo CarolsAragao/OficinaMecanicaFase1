@@ -4,7 +4,8 @@ using OficinaMecanicaFase1.Domain.Orcamentos;
 
 namespace OficinaMecanicaFase1.Application.OrdensServico;
 
-public sealed class ExecucaoOrdemServicoService(IExecucaoOrdemServicoRepository repositorio, TimeProvider tempo)
+public sealed class ExecucaoOrdemServicoService(
+    IExecucaoOrdemServicoRepository repositorio, TimeProvider tempo)
 {
     public Task<ResultadoOrdemServico<OrdemServico>> IniciarExecucaoAsync(
         long numero, Guid mecanicoId, CancellationToken cancelamento)
@@ -24,7 +25,11 @@ public sealed class ExecucaoOrdemServicoService(IExecucaoOrdemServicoRepository 
                     reserva.QuantidadeRestante >= necessario.Quantidade)))
                 return Invalido("A execução exige reserva integral de todos os itens autorizados.");
 
-            operacoes.Adicionar(ordem.IniciarExecucao(mecanicoId, agora));
+            var marco = ordem.IniciarExecucao(mecanicoId, agora);
+            operacoes.Adicionar(marco);
+            var email = await operacoes.ObterEmailClienteAsync(ordem.ClienteId, cancelamento);
+            if (!string.IsNullOrWhiteSpace(email))
+                operacoes.Adicionar(FabricaNotificacaoStatusOrdemServico.CriarPendente(ordem, marco, email, agora));
             return ResultadoOrdemServico<OrdemServico>.Sucesso(ordem);
         }, cancelamento);
     }
@@ -80,7 +85,11 @@ public sealed class ExecucaoOrdemServicoService(IExecucaoOrdemServicoRepository 
                         itens[reserva.ItemEstoqueId].LiberarReserva(reserva.QuantidadeRestante);
                     reserva.Liberar(agora);
                 }
-                operacoes.Adicionar(ordem.Historico.Last());
+                var marco = ordem.Historico.Last();
+                operacoes.Adicionar(marco);
+                var email = await operacoes.ObterEmailClienteAsync(ordem.ClienteId, cancelamento);
+                if (!string.IsNullOrWhiteSpace(email))
+                    operacoes.Adicionar(FabricaNotificacaoStatusOrdemServico.CriarPendente(ordem, marco, email, agora));
             }
             return ResultadoOrdemServico<OrdemServico>.Sucesso(ordem);
         }, cancelamento);

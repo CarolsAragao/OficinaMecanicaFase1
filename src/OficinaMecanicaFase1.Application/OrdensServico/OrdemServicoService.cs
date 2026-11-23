@@ -9,7 +9,12 @@ namespace OficinaMecanicaFase1.Application.OrdensServico;
 public sealed class OrdemServicoService(
     IOrdemServicoRepository repositorio, TimeProvider tempo)
 {
-    public async Task<ResultadoOrdemServico<OrdemServico>> CriarAsync(
+    public Task<ResultadoOrdemServico<OrdemServico>> CriarAsync(
+        AbrirOrdemServicoEntrada entrada, CancellationToken cancelamento) =>
+        repositorio.ExecutarComNotificacaoAsync(
+            operacoes => CriarAsync(operacoes, entrada, cancelamento), cancelamento);
+
+    private async Task<ResultadoOrdemServico<OrdemServico>> CriarAsync(IOrdemServicoRepository repositorio,
         AbrirOrdemServicoEntrada entrada, CancellationToken cancelamento)
     {
         var (clienteId, veiculoId, servicosIds, itens) = entrada;
@@ -47,7 +52,7 @@ public sealed class OrdemServicoService(
         }
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         repositorio.Adicionar(ordem);
-        return await SalvarAsync(ordem, cancelamento);
+        return await SalvarComNotificacaoAsync(repositorio, ordem, ordem, null, cancelamento);
     }
 
     public Task<OrdemServico?> ObterAsync(long numero, CancellationToken cancelamento) =>
@@ -62,15 +67,21 @@ public sealed class OrdemServicoService(
             : repositorio.ObterAndamentoDoClienteAsync(numero, normalizado, cancelamento);
     }
 
-    public async Task<ResultadoOrdemServico<OrdemServico>> EntregarAsync(long numero,
+    public Task<ResultadoOrdemServico<OrdemServico>> EntregarAsync(long numero,
+        Guid atendenteId, CancellationToken cancelamento) =>
+        repositorio.ExecutarComNotificacaoAsync(
+            operacoes => EntregarAsync(operacoes, numero, atendenteId, cancelamento), cancelamento);
+
+    private async Task<ResultadoOrdemServico<OrdemServico>> EntregarAsync(IOrdemServicoRepository repositorio, long numero,
         Guid atendenteId, CancellationToken cancelamento)
     {
         var ordem = await repositorio.ObterAsync(numero, cancelamento);
         if (ordem is null) return NaoEncontrado<OrdemServico>();
+        var statusAnterior = ordem.Status;
         try { repositorio.Adicionar(ordem.RegistrarEntrega(atendenteId, tempo.GetUtcNow())); }
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
-        return await SalvarAsync(ordem, cancelamento);
+        return await SalvarComNotificacaoAsync(repositorio, ordem, ordem, statusAnterior, cancelamento);
     }
 
     public async Task<ResultadoOrdemServico<OrdemServico>> AdicionarServicoAsync(
@@ -101,15 +112,21 @@ public sealed class OrdemServicoService(
         return await SalvarAsync(ordem, cancelamento);
     }
 
-    public async Task<ResultadoOrdemServico<OrdemServico>> IniciarDiagnosticoAsync(
+    public Task<ResultadoOrdemServico<OrdemServico>> IniciarDiagnosticoAsync(
+        long numero, Guid mecanicoId, CancellationToken cancelamento) =>
+        repositorio.ExecutarComNotificacaoAsync(
+            operacoes => IniciarDiagnosticoAsync(operacoes, numero, mecanicoId, cancelamento), cancelamento);
+
+    private async Task<ResultadoOrdemServico<OrdemServico>> IniciarDiagnosticoAsync(IOrdemServicoRepository repositorio,
         long numero, Guid mecanicoId, CancellationToken cancelamento)
     {
         var ordem = await repositorio.ObterAsync(numero, cancelamento);
         if (ordem is null) return NaoEncontrado<OrdemServico>();
+        var statusAnterior = ordem.Status;
         try { repositorio.Adicionar(ordem.IniciarDiagnostico(mecanicoId, tempo.GetUtcNow())); }
         catch (ArgumentException erro) { return Invalido<OrdemServico>(erro.Message, erro.ParamName); }
         catch (InvalidOperationException erro) { return Invalido<OrdemServico>(erro.Message, "status"); }
-        return await SalvarAsync(ordem, cancelamento);
+        return await SalvarComNotificacaoAsync(repositorio, ordem, ordem, statusAnterior, cancelamento);
     }
 
     public async Task<ResultadoOrdemServico<OrdemServico>> RegistrarDiagnosticoAsync(
@@ -123,13 +140,19 @@ public sealed class OrdemServicoService(
         return await SalvarAsync(ordem, cancelamento);
     }
 
-    public async Task<ResultadoOrdemServico<Orcamento>> GerarOrcamentoAsync(
+    public Task<ResultadoOrdemServico<Orcamento>> GerarOrcamentoAsync(
+        long numero, CancellationToken cancelamento) =>
+        repositorio.ExecutarComNotificacaoAsync(
+            operacoes => GerarOrcamentoAsync(operacoes, numero, cancelamento), cancelamento);
+
+    private async Task<ResultadoOrdemServico<Orcamento>> GerarOrcamentoAsync(IOrdemServicoRepository repositorio,
         long numero, CancellationToken cancelamento)
     {
         var ordem = await repositorio.ObterAsync(numero, cancelamento);
         if (ordem is null) return NaoEncontrado<Orcamento>();
         if (ordem.Status != StatusOrdemServico.EmDiagnostico || ordem.DiagnosticoRegistradoEmUtc is null)
             return Invalido<Orcamento>("Registre o diagnóstico antes de gerar o orçamento.", "status");
+        var statusAnterior = ordem.Status;
         if (await repositorio.ObterOrcamentoAsync(ordem.Id, cancelamento) is not null)
             return Invalido<Orcamento>("Esta OS já possui orçamento.", "status");
 
@@ -154,7 +177,7 @@ public sealed class OrdemServicoService(
         catch (OverflowException) { return Invalido<Orcamento>("O total do orçamento excede o limite permitido.", "valor"); }
         catch (InvalidOperationException erro) { return Invalido<Orcamento>(erro.Message, "status"); }
         repositorio.Adicionar(orcamento);
-        return await SalvarAsync(orcamento, cancelamento);
+        return await SalvarComNotificacaoAsync(repositorio, orcamento, ordem, statusAnterior, cancelamento);
     }
 
     public async Task<Orcamento?> ObterOrcamentoAsync(long numero, CancellationToken cancelamento)
@@ -178,6 +201,36 @@ public sealed class OrdemServicoService(
         try
         {
             await repositorio.SalvarAsync(cancelamento);
+            return ResultadoOrdemServico<T>.Sucesso(valor);
+        }
+        catch (ConflitoPersistenciaException)
+        {
+            return ResultadoOrdemServico<T>.Falha(ErroOrdemServico.Conflito,
+                "A ordem foi alterada ou um cadastro relacionado deixou de estar disponível. Consulte e tente novamente.");
+        }
+    }
+
+    private async Task<ResultadoOrdemServico<T>> SalvarComNotificacaoAsync<T>(
+        IOrdemServicoRepository repositorio, T valor, OrdemServico ordem,
+        StatusOrdemServico? statusAnterior, CancellationToken cancelamento)
+    {
+        try
+        {
+            if (statusAnterior == ordem.Status)
+            {
+                await repositorio.SalvarAsync(cancelamento);
+            }
+            else
+            {
+                var email = await repositorio.ObterEmailClienteAsync(ordem.ClienteId, cancelamento);
+                if (string.IsNullOrWhiteSpace(email))
+                    await repositorio.SalvarAsync(cancelamento);
+                else
+                    await repositorio.SalvarComNotificacaoAsync(
+                        () => repositorio.Adicionar(FabricaNotificacaoStatusOrdemServico.CriarPendente(
+                            ordem, ordem.Historico.Last(), email, tempo.GetUtcNow())), cancelamento);
+            }
+
             return ResultadoOrdemServico<T>.Sucesso(valor);
         }
         catch (ConflitoPersistenciaException)

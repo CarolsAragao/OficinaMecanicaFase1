@@ -22,10 +22,10 @@ public sealed class CadastroService(ICadastroRepository repositorio)
         repositorio.ObterClienteAsync(id, cancelamento);
 
     public async Task<ResultadoCadastro<Cliente>> CriarClienteAsync(
-        string nome, string documento, CancellationToken cancelamento)
+        string nome, string documento, string? email, CancellationToken cancelamento)
     {
         Cliente cliente;
-        try { cliente = new Cliente(nome, documento); }
+        try { cliente = new Cliente(nome, documento, email); }
         catch (ArgumentException erro) { return Invalido<Cliente>(erro); }
 
         if (await repositorio.ExisteDocumentoAsync(cliente.Documento, null, cancelamento))
@@ -35,11 +35,11 @@ public sealed class CadastroService(ICadastroRepository repositorio)
     }
 
     public async Task<ResultadoCadastro<Cliente>> AtualizarClienteAsync(
-        Guid id, string nome, string documento, CancellationToken cancelamento)
+        Guid id, string nome, string documento, string? email, CancellationToken cancelamento)
     {
         var cliente = await repositorio.ObterClienteAsync(id, cancelamento);
         if (cliente is null) return NaoEncontrado<Cliente>();
-        try { cliente.Atualizar(nome, documento); }
+        try { cliente.Atualizar(nome, documento, email); }
         catch (ArgumentException erro) { return Invalido<Cliente>(erro); }
 
         if (await repositorio.ExisteDocumentoAsync(cliente.Documento, id, cancelamento))

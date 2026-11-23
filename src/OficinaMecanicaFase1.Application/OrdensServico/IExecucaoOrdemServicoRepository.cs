@@ -18,6 +18,8 @@ public interface IOperacoesExecucao
     Task<Aditivo[]> ObterAditivosAsync(Guid ordemId, CancellationToken cancelamento);
     Task<ReservaItemOrdemServico[]> ObterReservasAtivasAsync(Guid ordemId, CancellationToken cancelamento);
     Task<Dictionary<Guid, ItemEstoque>> BloquearItensAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancelamento);
+    Task<string?> ObterEmailClienteAsync(Guid clienteId, CancellationToken cancelamento);
     void Adicionar(RegistroHistoricoOrdemServico marco);
     void Adicionar(ConsumoItemOrdemServico consumo);
+    void Adicionar(NotificacaoStatusOrdemServico notificacao);
 }

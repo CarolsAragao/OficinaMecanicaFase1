@@ -7,6 +7,8 @@ namespace OficinaMecanicaFase1.Application.OrdensServico;
 
 public interface IOrdemServicoRepository
 {
+    Task<ResultadoOrdemServico<T>> ExecutarComNotificacaoAsync<T>(
+        Func<IOrdemServicoRepository, Task<ResultadoOrdemServico<T>>> operacao, CancellationToken cancelamento);
     Task<bool> VeiculoPertenceAoClienteAsync(Guid clienteId, Guid veiculoId, CancellationToken cancelamento);
     Task<IReadOnlyDictionary<Guid, ServicoCatalogo>> ObterServicosAtivosAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancelamento);
     Task<IReadOnlyDictionary<Guid, ItemEstoque>> ObterItensAtivosAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancelamento);
@@ -24,5 +26,8 @@ public interface IOrdemServicoRepository
     void Adicionar(RegistroHistoricoOrdemServico marco);
     void Adicionar(Orcamento orcamento);
     void Adicionar(EmissaoCodigoAcesso emissao);
+    void Adicionar(NotificacaoStatusOrdemServico notificacao);
+    Task<string?> ObterEmailClienteAsync(Guid clienteId, CancellationToken cancelamento);
     Task SalvarAsync(CancellationToken cancelamento);
+    Task SalvarComNotificacaoAsync(Action registrarNotificacao, CancellationToken cancelamento);
 }

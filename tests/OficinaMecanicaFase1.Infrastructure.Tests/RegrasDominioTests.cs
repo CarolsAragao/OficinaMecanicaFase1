@@ -13,19 +13,24 @@ public sealed class RegrasDominioTests
     [Fact]
     public void CadastrosNormalizamIdentificadoresEPreservamProprietario()
     {
-        var cliente = new Cliente(" Ana ", "529.982.247-25");
+        var cliente = new Cliente(" Ana ", "529.982.247-25", " ana@exemplo.com ");
         var veiculo = new Veiculo(cliente.Id, "abc-1234", " Fiat ", " Uno ", 2020);
         var proprietario = veiculo.ClienteId;
         Assert.Equal("52998224725", cliente.Documento);
+        Assert.Equal("ana@exemplo.com", cliente.Email);
         Assert.Equal("ABC1234", veiculo.Placa);
         cliente.Atualizar(" Ana Maria ", "04.252.011/0001-10");
         veiculo.Atualizar("abc1d23", " Ford ", " Ka ", 2021);
         Assert.Equal("Ana Maria", cliente.Nome);
         Assert.Equal("04252011000110", cliente.Documento);
+        Assert.Equal("ana@exemplo.com", cliente.Email);
         Assert.Equal(proprietario, veiculo.ClienteId);
         Assert.Equal("ABC1D23", veiculo.Placa);
         Assert.Throws<ArgumentException>(() => cliente.Atualizar(" ", cliente.Documento));
         Assert.Throws<ArgumentException>(() => cliente.Atualizar("Ana", "00000000000"));
+        Assert.Throws<ArgumentException>(() => cliente.Atualizar("Ana", cliente.Documento, "email-invalido"));
+        cliente.Atualizar("Ana Maria", cliente.Documento, " ");
+        Assert.Null(cliente.Email);
         Assert.Throws<ArgumentException>(() => new Veiculo(Guid.Empty, "ABC1234", "Fiat", "Uno", 2020));
         Assert.Throws<ArgumentException>(() => veiculo.Atualizar("INVALIDA", "Fiat", "Uno", 2020));
         Assert.Throws<ArgumentException>(() => veiculo.Atualizar("ABC1234", " ", "Uno", 2020));

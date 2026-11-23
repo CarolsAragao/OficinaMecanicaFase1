@@ -73,7 +73,13 @@ public sealed class ExecucaoOrdemServicoRepository(DbContextOptions<OficinaDbCon
             IReadOnlyCollection<Guid> ids, CancellationToken cancelamento) =>
             BloqueioEstoque.BloquearItensAsync(db, ids, cancelamento);
 
+        public Task<string?> ObterEmailClienteAsync(Guid clienteId, CancellationToken cancelamento) =>
+            db.Clientes.AsNoTracking().Where(cliente => cliente.Id == clienteId)
+                .Select(cliente => cliente.Email).SingleOrDefaultAsync(cancelamento);
+
         public void Adicionar(RegistroHistoricoOrdemServico marco) => db.Set<RegistroHistoricoOrdemServico>().Add(marco);
         public void Adicionar(ConsumoItemOrdemServico consumo) => db.Set<ConsumoItemOrdemServico>().Add(consumo);
+        public void Adicionar(NotificacaoStatusOrdemServico notificacao) =>
+            db.Set<NotificacaoStatusOrdemServico>().Add(notificacao);
     }
 }
